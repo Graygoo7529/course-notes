@@ -1,0 +1,14 @@
+{
+  "version": "coursework-v1",
+  "purpose": "Small descriptive coursework study; demonstrate Boolean search quality using a fixed set of minute snapshots and purposive article review.",
+  "selection_rule": "Reuse the successful 2026-09-09 20:16 UTC probe and select the same minute at five-day intervals before/after it, one date in each phase. Fixed before downloading additional files; convenience snapshots, not a probability sample.",
+  "snapshots": [
+    {"file_stamp": "20260904201600", "stage": "prelaunch", "label": "预热期"},
+    {"file_stamp": "20260909201600", "stage": "announcement", "label": "发布期", "existing_run": "data/ngrams_probes/20260921T080106_733713Z"},
+    {"file_stamp": "20260914201600", "stage": "preorder", "label": "预购期"},
+    {"file_stamp": "20260919201600", "stage": "retail", "label": "首发期"}
+  ],
+  "download_budget": {"additional_file_pairs": 3, "max_compressed_bytes_per_file": 8388608, "max_decompressed_bytes_per_file": 67108864},
+  "review_rule": "Select about 12-16 cases from broad/core/issue matches to include direct product reporting, comparative or launch roundups, and likely incidental matches. Use retrieved article text to judge relevance; inaccessible cases remain unknown. This diagnostic case selection is not an unbiased precision estimate.",
+  "completion_target": "Boolean query registry and comparison counts, review evidence table, 2-3 figures and a short Chinese report. Country comparison is limited to verified outlet cases if coverage is sparse."
+}

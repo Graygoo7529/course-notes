@@ -1,0 +1,41 @@
+{
+  "study_id": "iphone18pro_gdelt",
+  "query_version": "v0.1-pilot",
+  "endpoint": "https://api.gdeltproject.org/api/v2/doc/doc",
+  "timezone": "UTC",
+  "window_start": "2026-08-26T00:00:00Z",
+  "snapshot_end_exclusive": "2026-09-21T00:00:00Z",
+  "planned_end_exclusive": "2026-09-26T00:00:00Z",
+  "core": "(\"iphone 18 pro\" OR \"iphone18 pro\" OR \"iphone18pro\" OR \"iphone 18 promax\" OR \"iphone18 promax\")",
+  "broad_core": "(\"iphone 18\" OR \"iphone18\")",
+  "exclusions": "-domain:apple.com -domain:apple.com.cn",
+  "topics": {
+    "camera": "(camera OR cameras OR photography OR photographic OR \"variable aperture\")",
+    "ai": "(\"artificial intelligence\" OR \"Apple Intelligence\" OR Siri OR \"generative AI\" OR \"on-device AI\")",
+    "performance_battery": "(performance OR chip OR chipset OR battery OR charging OR overheating OR \"A20 Pro\")",
+    "price_value": "(price OR prices OR pricing OR expensive OR affordable OR value OR upgrade OR upgrades)",
+    "market_competition": "(competition OR competitor OR competitors OR Samsung OR Huawei OR Xiaomi OR \"market share\" OR demand)",
+    "availability": "(preorder OR preorders OR \"pre-order\" OR \"pre-orders\" OR availability OR shipment OR shipments OR delivery OR shortage OR shortages)"
+  },
+  "countries": {
+    "global": "",
+    "us": "sourcecountry:unitedstates",
+    "uk": "sourcecountry:unitedkingdom",
+    "jp": "sourcecountry:japan",
+    "cn": "sourcecountry:china"
+  },
+  "stages": [
+    {"id": "prelaunch", "start": "2026-08-26", "end_exclusive": "2026-09-09"},
+    {"id": "announcement", "start": "2026-09-09", "end_exclusive": "2026-09-12"},
+    {"id": "preorder", "start": "2026-09-12", "end_exclusive": "2026-09-18"},
+    {"id": "retail", "start": "2026-09-18", "end_exclusive": "2026-09-26"}
+  ],
+  "events": [
+    {"date": "2026-09-09", "label": "Announcement", "source": "https://www.apple.com/newsroom/2026/09/apple-debuts-iphone-18-pro-and-iphone-18-pro-max/"},
+    {"date": "2026-09-12", "label": "Preorders", "source": "https://www.apple.com.cn/newsroom/2026/09/apple-debuts-iphone-18-pro-and-iphone-18-pro-max/"},
+    {"date": "2026-09-18", "label": "Retail launch", "source": "https://www.apple.com.cn/newsroom/2026/09/the-latest-iphone-apple-watch-and-airpods-lineups-arrive-in-stores-worldwide/"}
+  ],
+  "min_interval_seconds": 6,
+  "timeout_seconds": 30,
+  "max_attempts": 2
+}

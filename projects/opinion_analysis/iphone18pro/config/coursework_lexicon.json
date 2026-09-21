@@ -1,0 +1,26 @@
+{
+  "version": "coursework-v1-en-es-fr",
+  "note": "English pilot dictionary retained as baseline. Spanish/French additions derived from reviewed articles; evaluate locally on the same files. Local matching is not claimed to reproduce DOC translation/stemming. Other languages remain unassessed for topic coverage.",
+  "supported_languages": ["en", "es", "fr"],
+  "additions": {
+    "es": {
+      "camera": ["cámara", "cámaras", "fotografía", "fotográfico", "apertura variable"],
+      "ai": ["inteligencia artificial"],
+      "performance_battery": ["rendimiento", "batería", "baterías", "autonomía", "carga", "procesador"],
+      "price_value": ["precio", "precios", "caro", "cara", "asequible", "merece la pena", "calidad-precio"],
+      "market_competition": ["competencia", "competidores", "demanda"],
+      "availability": ["reservar", "reservas", "preventa", "disponibilidad", "envíos", "entrega"]
+    },
+    "fr": {
+      "camera": ["appareil photo", "photo", "photographie", "ouverture variable"],
+      "ai": ["intelligence artificielle"],
+      "performance_battery": ["performances", "puce", "batterie", "autonomie", "recharge", "refroidissement"],
+      "price_value": ["prix", "cher", "chère", "tarifs", "rapport qualité-prix"],
+      "market_competition": ["concurrence", "concurrent", "concurrents", "demande"],
+      "availability": ["précommande", "précommandes", "disponibilité", "livraison", "pénurie"]
+    }
+  },
+  "launch_terms": ["launch", "launched", "release", "released", "announced", "announcement"],
+  "rumor_terms": ["rumor", "rumors", "rumour", "rumours", "leak", "leaks"],
+  "comparison_terms": ["foldable", "folding", "pliable", "pliant", "plegable", "iphone duo"]
+}

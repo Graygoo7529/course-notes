@@ -1,0 +1,7 @@
+/data/input/*
+!/data/input/.gitkeep
+/outputs/*
+!/outputs/.gitkeep
+/.deps/
+__pycache__/
+*.py[cod]

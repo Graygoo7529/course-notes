@@ -1,0 +1,5 @@
+[tool.ty.environment]
+extra-paths = ["src", ".deps"]
+
+[tool.ty.src]
+include = ["src", "tests", "run.py"]

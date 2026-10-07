@@ -132,8 +132,9 @@ def _strokes_from_mask(binary: np.ndarray, score: np.ndarray) -> list[np.ndarray
 
 def generate_lines(features, mask: np.ndarray, config: LineConfig | None = None) -> LinePlan:
     cfg = config or LineConfig()
-    edge = robust01(features.edge, mask)
-    dark = robust01(features.dark, mask)
+    reliability = .35 + .65 * np.clip(features.coherence, 0, 1)
+    edge = robust01(features.edge, mask) * reliability
+    dark = robust01(features.dark, mask) * (.55 + .45 * reliability)
     nms_edge = oriented_nms(edge, features.theta)
     nms_dark = oriented_nms(dark, features.theta)
     near_dark = cv2.dilate(nms_dark, np.ones((3, 3), np.uint8))

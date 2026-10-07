@@ -31,8 +31,13 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--mask", required=True)
     p.add_argument("--output", default=str(ROOT / "outputs" / "run"))
     p.add_argument("--render-scale", type=int, default=4)
-    p.add_argument("--sigma", type=float, default=.8)
-    p.add_argument("--dark-sigma", type=float, default=1.6)
+    p.add_argument("--scales", type=float, nargs="+", default=[.6, 1.2, 2.4],
+                   help="多尺度高斯尺度，例如 --scales 0.6 1.2 2.4")
+    p.add_argument("--sigma", type=float, default=None,
+                   help="兼容旧命令：指定后使用 sigma、2sigma、4sigma")
+    p.add_argument("--dark-sigma", type=float, default=None,
+                   help="兼容旧命令：作为最大 DoG 尺度；优先级低于 --scales")
+    p.add_argument("--operator", choices=["sobel", "scharr"], default="sobel")
     p.add_argument("--palette-size", type=int, default=5)
     p.add_argument("--palette-style", choices=["natural", "warm", "pastel", "noir"], default="natural")
     p.add_argument("--line-width", type=float, default=1.35)
@@ -50,8 +55,15 @@ def main(argv: list[str] | None = None) -> int:
     args = parser().parse_args(argv)
     image = read_rgb(args.input)
     mask = read_mask(args.mask, image.shape[:2])
+    scales = tuple(args.scales)
+    if args.sigma is not None:
+        scales = (args.sigma, 2 * args.sigma, 4 * args.sigma)
+    feature = FeatureConfig(scales=scales, operator=args.operator)
+    if args.dark_sigma is not None and args.sigma is not None:
+        feature = FeatureConfig(scales=scales, operator=args.operator,
+                                dog_ratio=max(1.01, args.dark_sigma / args.sigma))
     config = V2Config(
-        feature=FeatureConfig(args.sigma, args.dark_sigma),
+        feature=feature,
         line=LineConfig(args.line_low, args.line_high, args.join_gap),
         region=RegionConfig(palette_size=args.palette_size, palette_style=args.palette_style),
         tone=ToneConfig(args.shadow_fraction, args.shadow_depth),

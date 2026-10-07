@@ -37,7 +37,8 @@ class V2Tests(unittest.TestCase):
         f = extract_features(self.image, self.mask)
         self.assertTrue(np.isfinite(f.edge).all())
         self.assertTrue(np.all((f.coherence >= 0) & (f.coherence <= 1)))
-        self.assertEqual(f.gx.shape, self.image.shape)
+        self.assertEqual(f.gx.shape[1:], self.image.shape)
+        self.assertEqual(len(f.scales), f.edges.shape[0])
 
     def test_end_to_end_and_manifest(self):
         result = cartoonize(self.image, self.mask, V2Config())

@@ -39,20 +39,35 @@ def cartoonize(image: np.ndarray, mask: np.ndarray, config: V2Config | None = No
     regions = generate_regions(features, features.mask, cfg.region)
     tone = generate_tone(features, regions, features.mask, cfg.tone)
     rendered = compose_image(lines, regions, tone, features.mask, cfg.render)
+    feature_images = {
+        "input": features.image,
+        "guide_fine": features.guides[0],
+        "gx_R_fine": features.gx[0, ..., 0], "gx_G_fine": features.gx[0, ..., 1],
+        "gx_B_fine": features.gx[0, ..., 2],
+        "response_R_fine": np.hypot(features.gx[0, ..., 0], features.gy[0, ..., 0]),
+        "response_G_fine": np.hypot(features.gx[0, ..., 1], features.gy[0, ..., 1]),
+        "response_B_fine": np.hypot(features.gx[0, ..., 2], features.gy[0, ..., 2]),
+        "edge_fused": features.edge, "theta_fused": features.theta,
+        "coherence_fused": features.coherence, "dark_candidate": features.dark,
+        "lightness": features.lightness, "chroma_edge": features.chroma_edge,
+        "color_barrier": np.maximum(features.right_barrier, features.down_barrier),
+    }
+    for index, sigma in enumerate(features.scales):
+        feature_images[f"guide_sigma_{sigma:g}"] = features.guides[index]
+        feature_images[f"edge_sigma_{sigma:g}"] = features.edges[index]
+        feature_images[f"dog_signed_sigma_{sigma:g}"] = features.dog[index]
+        feature_images[f"theta_sigma_{sigma:g}"] = features.thetas[index]
+        feature_images[f"coherence_sigma_{sigma:g}"] = features.coherences[index]
     stages = {
-        "features": {
-            "input": features.image, "guide": features.guide_rgb,
-            "gx_R": features.gx[..., 0], "gx_G": features.gx[..., 1], "gx_B": features.gx[..., 2],
-            "edge": features.edge, "theta": features.theta, "coherence": features.coherence,
-            "dark": features.dark, "color_barrier": np.maximum(features.right_barrier, features.down_barrier),
-        },
+        "features": feature_images,
         "lines": {
-            "edge_raw": lines.edge, "dark_raw": lines.dark, "nms_edge": lines.nms_edge,
+            "edge_fused": lines.edge, "dark_candidate": lines.dark, "nms_edge": lines.nms_edge,
             "nms_dark": lines.nms_dark, "score": lines.score, "retained": lines.retained,
             "skeleton": lines.skeleton, "bridged": lines.bridged,
         },
         "regions": {
-            "lab_lightness": features.lightness, "barrier": regions.barrier,
+            "lab_lightness": features.lightness, "chroma_edge": features.chroma_edge,
+            "barrier": regions.barrier,
             "initial_labels": regions.initial_labels, "labels": regions.labels, "flat": regions.flat,
         },
         "tone": {

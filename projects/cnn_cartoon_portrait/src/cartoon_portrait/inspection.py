@@ -6,7 +6,11 @@ import hashlib
 import json
 import shutil
 import sys
+import webbrowser
+from functools import partial
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from typing import Any, cast
 
 import cv2
 import numpy as np
@@ -18,6 +22,91 @@ from .features import ChannelFeatures, FusionConfig, fuse_features
 from .lines import thin_edges
 from .pipeline import FloatImage, Mask, _extend_foreground, masked_gaussian, read_image
 from .strokes import StrokeConfig, trace_line_features, trace_paths
+
+
+def _shape(value: NDArray) -> str:
+    return "×".join(str(size) for size in value.shape)
+
+
+def architecture_description(arrays: dict[str, NDArray], record: dict[str, object], stats: dict[str, object]
+                             ) -> dict[str, object]:
+    """把正式管道的函数、张量去向和当前证据整理成观察室的上层索引。"""
+    height, width = arrays["mask"].shape
+    config = cast(dict[str, Any], record["config"])
+    feature_config = cast(dict[str, Any], config["features"])
+    scales = cast(list[float], feature_config["scales"])
+    k = len(scales)
+    nodes = [
+        {"id": "input", "title": "输入与人物遮罩", "kind": "输入", "x": 25, "y": 22,
+         "w": 190, "h": 76, "group": "gaussian", "function": "read_image / mask",
+         "input": "照片、交互标记或已有 mask", "output": f"I: {height}×{width}×3；M: {height}×{width}",
+         "method": "EXIF 校正、RGB 归一化；遮罩由 GrabCut 或用户提供。GrabCut 不属于卷积。",
+         "convolution": "无", "outputs": ["input", "mask"], "consumers": ["masked_gaussian", "extract_feature_bank", "render_cartoon"]},
+        {"id": "bank", "title": "多尺度逐通道特征", "kind": "共享特征", "x": 280, "y": 22,
+         "w": 220, "h": 94, "group": "fusion", "function": "extract_feature_bank",
+         "input": f"I、M；尺度 σ={scales}",
+         "output": f"guides/gx/gy: {k}×{height}×{width}×3；edges/dog/theta/q: {k}×{height}×{width}",
+         "method": "逐通道高斯 → Sobel/Scharr → 二次项 → 结构张量；DoG 与 Lab 色度另行计算。",
+         "convolution": "DW；空间可分离高斯与 Sobel；固定 PW 融合二次项。",
+         "outputs": ["guides", "gx", "gy", "edges", "dog", "theta", "coherence", "direction_valid", "lab", "lightness", "chroma_edge"],
+         "consumers": ["fuse_line_features", "fuse_region_features", "design_fills"]},
+        {"id": "line", "title": "线条分支", "kind": "任务分支", "x": 548, "y": 0,
+         "w": 220, "h": 118, "group": "lines", "function": "fuse_line_features → design_strokes",
+         "input": "edges、dog、theta、coherence、mask、保护/删除提示",
+         "output": "LineFeatures → StrokeSet（路径、来源、线宽、透明度）",
+         "method": "暗线/边界候选 → NMS → 重复抑制 → 滞后阈值 → 骨架图 → 路径拟合。",
+         "convolution": "输入来自固定卷积；NMS、膨胀、连通筛选、骨架和路径不是卷积。",
+         "outputs": ["line_edge", "line_dark", "line_score", "retained", "skeleton", "strokes"],
+         "consumers": ["render_cartoon"]},
+        {"id": "color", "title": "区域、底色与阴影", "kind": "任务分支", "x": 548, "y": 148,
+         "w": 220, "h": 118, "group": "color", "function": "fuse_region_features → organize_regions → design_fills",
+         "input": "Lab、guides、fine_structure、lightness、mask",
+         "output": "区域标签、palette、base/detail、shadow、colors",
+         "method": "边界权重 → WLS → 当前图像颜色原型 → 连通区域合并 → 区域内基础明度与阴影。",
+         "convolution": "边界权重借助结构响应；WLS 是加权优化，不是卷积。",
+         "outputs": ["regions", "flat", "base_lightness", "detail_lightness", "shadow", "colors"],
+         "consumers": ["render_cartoon"]},
+        {"id": "render", "title": "高分辨率重绘", "kind": "输出", "x": 835, "y": 75,
+         "w": 205, "h": 110, "group": "lines", "function": "render_cartoon",
+         "input": "StrokeSet、FillPlan、M",
+         "output": "RGBA：透明背景漫画",
+         "method": "区域多边形＋笔画路径；目标画布插值、覆盖率抗锯齿、线性 RGB 合成。",
+         "convolution": "无学习型上采样；插值和绘制不是转置卷积或 PixelShuffle。",
+         "outputs": ["cartoon", "alpha"], "consumers": ["用户"]},
+    ]
+    edges = [("input", "bank"), ("bank", "line"), ("bank", "color"), ("line", "render"), ("color", "render")]
+    route = [
+        {"feature": "guides", "shape": _shape(arrays["guides"]), "used_by": ["extract_feature_bank", "fuse_region_features"], "role": "平滑颜色与颜色边界"},
+        {"feature": "gx / gy", "shape": _shape(arrays["gx"]), "used_by": ["fuse_features", "tensor_stages"], "role": "逐通道方向变化；生成结构张量"},
+        {"feature": "edges", "shape": _shape(arrays["edges"]), "used_by": ["fuse_line_features"], "role": "边界候选；细尺度直接进入线条"},
+        {"feature": "dog", "shape": _shape(arrays["dog"]), "used_by": ["fuse_line_features", "design_fills"], "role": "暗结构候选；当前线条只读最细尺度"},
+        {"feature": "theta / coherence", "shape": _shape(arrays["theta"]), "used_by": ["thin_edges", "fuse_line_features"], "role": "法向、方向可靠性与切向推断"},
+        {"feature": "lab / lightness", "shape": _shape(arrays["lab"]), "used_by": ["fuse_region_features", "design_fills"], "role": "区域颜色、基础明度与阴影"},
+        {"feature": "chroma_edge", "shape": _shape(arrays["chroma_edge"]), "used_by": ["inspection only"], "role": "色度变化观察；当前未直接进入线条分数"},
+    ]
+    rgb_corr = cast(list[list[float | None]], stats["rgb_magnitude_correlations"])
+    gray_corr = cast(float | None, stats["tensor_weighted_gray_strength_correlation"])
+    def metric(value: float | None) -> str:
+        return "不可定义（常量或无方差）" if value is None else f"{value:.3f}"
+    ridge_removed = int(cast(int, stats["ridge_removed_pixels"]))
+    ridge_above_low = int(cast(int, stats["ridge_removed_above_low"]))
+    findings = [
+        {"status": "保留", "title": "逐通道 gx/gy 与结构张量", "evidence": f"RGB 幅值相关约 R/G={metric(rgb_corr[0][1])}，结构强度与灰度路线相关 {metric(gray_corr)}。",
+         "decision": "保留作为可解释的共享结构入口；不要只靠调 RGB 权重解决断线。"},
+        {"status": "保留并扩展", "title": "多尺度 DoG", "evidence": "已能响应镜框、眉眼和嘴缝，但线条分支当前只使用最细尺度 dog[0]。",
+         "decision": "保留；下一步记录尺度来源，用粗尺度稳定发束/镜框，用细尺度保护五官。"},
+        {"status": "待接入", "title": "Lab 色度边缘", "evidence": "已经保存并可视化，但没有直接进入 line_score；区域分支使用的是邻域颜色差异。",
+         "decision": "先用消融比较，再决定是否作为颜色边界的独立证据，避免把色差全部画成黑线。"},
+        {"status": "精简候选", "title": "base 与 guide 双份导出", "evidence": "两者都来自 bank.guides[0]，只是文件名不同。",
+         "decision": "保留一个规范名称，旧文件可作为兼容别名，不再让它们看起来像两种特征。"},
+        {"status": "改写候选", "title": "跨尺度 max 支持与硬抑制", "evidence": f"只调整已有候选幅值；强暗线邻域清除了 {ridge_removed} 个边界候选，其中 {ridge_above_low} 个达到低阈值。",
+         "decision": "用多尺度软融合和方向/距离条件替代无条件清零，避免误删眼睑。"},
+        {"status": "延后或移除", "title": "未使用的粗尺度方向进入线条路径", "evidence": "当前 theta/q 的线条细化只读最细尺度；粗尺度方向只留在存档中。",
+         "decision": "若不做流场或多尺度一致性实验，避免把它误称为已参与融合；可暂时仅保留诊断输出。"},
+    ]
+    return {"nodes": nodes, "edges": edges, "route": route, "findings": findings,
+            "shape": [height, width], "scale_count": k,
+            "principle": "每个特征必须有明确消费者；没有消费者的特征只作为诊断或消融候选。"}
 
 
 def tensor_stages(gx: FloatImage, gy: FloatImage, mask: Mask, config: BankConfig
@@ -286,12 +375,13 @@ def export_inspection(run: Path, output: Path, crop: tuple[int, int, int, int] |
             value = np.pad(value, ((0, 1), (0, 0)))
         add(key, value, title, "color", "色度图当前仅作观察；区域分支通过邻接色差与结构权重做 WLS。阴影由区域内基础明度筛选，细节层未全部重加回填色。右/下亲和度末列/末行无邻居，以零占位。",
             unit, limit, signed)
-    manifest = {"schema_version": 1, "source_run": str(run.resolve()), "source_parameters": record,
+    architecture = architecture_description(arrays, record, stats)
+    manifest = {"schema_version": 2, "source_run": str(run.resolve()), "source_parameters": record,
                 "source_features_sha256": hashlib.sha256((run / "features.npz").read_bytes()).hexdigest(),
                 "original_shape": [height, width], "crop_xywh": list(crop), "scales": bank.scales,
                 "weights": feature_config.weights, "operator": feature_config.operator,
                 "provenance": "saved feature arrays + checked replay; Gaussian decomposition reconstructed from saved 8-bit input",
-                "statistics": stats, "maps": catalog,
+                "statistics": stats, "maps": catalog, "architecture": architecture,
                 "display": "same-family fixed scale; signed blue-negative/red-positive, white background; PNG is not raw data",
                 "array_axes": "tensor_terms K,H,W,C,(xx,xy,yy); tensor_raw/smoothed K,H,W,(xx,xy,yy); line stages H,W"}
     (output / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -324,21 +414,61 @@ def make_stage_animation(output: Path, entries: list[tuple[str, str, str]]) -> N
     frames[0].save(output / "line-stages.gif", save_all=True, append_images=frames[1:], duration=1250, loop=0)
 
 
+def serve_observation(output: Path, host: str, port: int, open_browser: bool = True) -> None:
+    """在本地提供离线观察页；不上传照片，也不依赖外部资源。"""
+    handler = partial(SimpleHTTPRequestHandler, directory=str(output.resolve()))
+    try:
+        server = ThreadingHTTPServer((host, port), handler)
+    except OSError as error:
+        raise ValueError(f"无法监听 {host}:{port}，请改用 --port 0 或其它端口。") from error
+    actual_port = int(server.server_address[1])
+    url = f"http://127.0.0.1:{actual_port}/index.html"
+    print(f"观察室：{url}")
+    print("服务运行中；关闭观察室请回到此窗口按 Ctrl+C。", flush=True)
+    if open_browser:
+        webbrowser.open(url, new=2)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("观察室已关闭。", flush=True)
+    finally:
+        server.server_close()
+
+
+def _bool_value(value: str) -> bool:
+    lowered = value.lower()
+    if lowered in ("1", "true", "yes", "on"):
+        return True
+    if lowered in ("0", "false", "no", "off"):
+        return False
+    raise argparse.ArgumentTypeError("需要 true/false。")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="保存逐通道／融合／线条去留的交互观察页与原始数据")
     parser.add_argument("--run", type=Path, required=True, help="已有 comic 结果目录")
     parser.add_argument("--output", type=Path, help="新建观察目录，默认在 run 旁加 -inspection")
     parser.add_argument("--crop", type=int, nargs=4, metavar=("X", "Y", "W", "H"), help="数值窗口，最大 256×256，单位原图像素")
+    parser.add_argument("--view", nargs="?", const=True, default=False, type=_bool_value,
+                        help="生成后启动本地观察室；可写 --view 或 --view=true")
+    parser.add_argument("--host", default="127.0.0.1", help="观察室监听地址，默认只允许本机访问")
+    parser.add_argument("--port", type=int, default=0, help="观察室端口；0 表示自动选择空闲端口")
     args = parser.parse_args(argv)
     output = args.output or args.run.with_name(args.run.name + "-inspection")
     try:
         crop = tuple(args.crop) if args.crop else None
         if crop is not None:
             crop = (crop[0], crop[1], crop[2], crop[3])
-        result = export_inspection(args.run, output, crop)
+        if args.view and output.exists() and (output / "index.html").is_file():
+            result = output / "index.html"
+            print(f"复用已有观察目录：{output.resolve()}")
+        else:
+            result = export_inspection(args.run, output, crop)
         print(f"观察页：{result.resolve()}")
         print(f"逐步动画：{(output / 'line-stages.gif').resolve()}")
         print(f"原始状态与计算说明：{(output / 'trace.npz').resolve()} / manifest.json")
+        if args.view:
+            serve_observation(output, args.host, args.port)
         return 0
     except (ValueError, OSError, KeyError, cv2.error) as error:
         print(f"观察导出未完成：{error}", file=sys.stderr)

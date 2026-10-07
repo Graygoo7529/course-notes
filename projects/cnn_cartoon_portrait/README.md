@@ -215,6 +215,14 @@ python inspect_run.py --run outputs/comic-v07-selfie-final
 
 打开新生成目录的 `index.html`，切换 RGB、尺度与处理步骤，点击像素查看方向卷积的 3×3 乘加，以及结构张量的逐通道贡献。支持局部放大、显示增益、阶段回放与滑动窗口；同时保存完整 PNG、NPZ、统计和 GIF。无需网络，不改变原有漫画结果。`--output` 指定新目录，`--crop X Y W H` 选择最大 256×256 的数值窗口；全图文件仍完整保存。更详细的范围和下一步改进见[线条诊断与改进](线条诊断与改进.md)。
 
+希望生成后直接启动观察室时使用 `--view=true`（也接受单独的 `--view`）：
+
+~~~powershell
+python inspect_run.py --run outputs/comic-v07-selfie-final --view=true
+~~~
+
+程序会在本机选择空闲端口并打开浏览器；终端保持运行直到按 `Ctrl+C`。也可以只生成目录，再用已有的 `index.html` 或任意本地静态服务器打开。监听地址默认是 `127.0.0.1`，不会把照片提供给局域网。
+
 ~~~powershell
 conda activate d2l
 python -m unittest discover -s tests -v

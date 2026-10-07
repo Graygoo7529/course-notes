@@ -7,6 +7,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any, cast
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT / ".deps"), str(ROOT / "src")]
@@ -18,11 +19,33 @@ from cartoon_portrait.comic import ComicConfig, cartoonize
 from cartoon_portrait.comic_artifacts import export_comic
 from cartoon_portrait.feature_bank import BankConfig
 from cartoon_portrait.features import channel_gradients
-from cartoon_portrait.inspection import export_inspection, gaussian_stages, gradient_kernel, main, tensor_stages
+from cartoon_portrait.inspection import _bool_value, architecture_description, export_inspection, gaussian_stages, gradient_kernel, main, tensor_stages
 from cartoon_portrait.pipeline import _extend_foreground, masked_gaussian
 
 
 class InspectionTests(unittest.TestCase):
+    def test_architecture_and_view_boolean_contract(self) -> None:
+        self.assertTrue(_bool_value("true"))
+        self.assertFalse(_bool_value("false"))
+        self.assertEqual(_bool_value("ON"), True)
+        with self.assertRaises(Exception):
+            _bool_value("maybe")
+        arrays = {"mask": np.ones((2, 3), bool), "guides": np.zeros((1, 2, 3, 3), np.float32),
+                  "gx": np.zeros((1, 2, 3, 3), np.float32), "edges": np.zeros((1, 2, 3), np.float32),
+                  "dog": np.zeros((1, 2, 3), np.float32), "theta": np.zeros((1, 2, 3), np.float32),
+                  "lab": np.zeros((2, 3, 3), np.float32), "chroma_edge": np.zeros((2, 3), np.float32)}
+        arrays["gy"] = arrays["gx"]
+        arrays["coherence"] = arrays["theta"]
+        record = {"config": {"features": {"scales": [0.6]}}}
+        stats = {"rgb_magnitude_correlations": [[None] * 3] * 3,
+                 "tensor_weighted_gray_strength_correlation": None,
+                 "ridge_removed_pixels": 0, "ridge_removed_above_low": 0}
+        architecture = cast(dict[str, Any], architecture_description(arrays, cast(dict[str, object], record),
+                                                                     cast(dict[str, object], stats)))
+        self.assertEqual([node["id"] for node in architecture["nodes"]],
+                         ["input", "bank", "line", "color", "render"])
+        self.assertEqual(len(architecture["edges"]), 5)
+
     def test_gaussian_factorization_and_local_kernel_at_boundaries(self) -> None:
         rng = np.random.default_rng(11)
         image = rng.random((11, 13, 3), dtype=np.float32)

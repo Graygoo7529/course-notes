@@ -110,8 +110,9 @@ def skeletonize(binary: Mask) -> Mask:
     return result
 
 
-def fuse_line_features(bank: FeatureBank, mask: Mask, protected: Mask, suppressed: Mask,
-                       config: StrokeConfig) -> LineFeatures:
+def trace_line_features(bank: FeatureBank, mask: Mask, protected: Mask, suppressed: Mask,
+                        config: StrokeConfig) -> tuple[LineFeatures, dict[str, FloatImage | Mask]]:
+    """与生产管道共用计算，保留抑制前后的状态；数组不作为可变工作区复用。"""
     config.validate()
     for name, hint in (("protected", protected), ("suppressed", suppressed)):
         if hint.shape != mask.shape or hint.dtype != np.bool_:
@@ -123,30 +124,50 @@ def fuse_line_features(bank: FeatureBank, mask: Mask, protected: Mask, suppresse
     theta, q = bank.theta[0], bank.coherence[0]
     fine = bank.edges[0]
     coarse = np.max(bank.edges, axis=0)
-    # 粗尺度仅提供加分；不要求一条细线必须在每个尺度都存在。
+    # 跨尺度支持只调整现有幅值，不生成连接；最大值也包括最细尺度。
     support = np.clip(coarse / np.float32(config.edge_scale), 0, 1)
     raw_dark = np.maximum(bank.dog[0], 0)
-    dark = np.clip(raw_dark / np.float32(config.dark_scale), 0, 1)
-    dark = thin_edges(dark, theta, q, mask)
-    ridge_near = cv2.dilate(dark, np.ones((3, 3), dtype=np.uint8))
-    edge = thin_edges(np.clip(fine / np.float32(config.edge_scale), 0, 1), theta, q, mask)
+    dark_normalized = raw_dark / np.float32(config.dark_scale)
+    dark_clipped = np.clip(dark_normalized, 0, 1)
+    dark = thin_edges(dark_clipped, theta, q, mask)
+    ridge_near = cv2.dilate(dark, np.ones((3, 3), dtype=np.uint8)).astype(np.float32)
+    edge_normalized = fine / np.float32(config.edge_scale)
+    edge_clipped = np.clip(edge_normalized, 0, 1)
+    edge_thinned = thin_edges(edge_clipped, theta, q, mask)
     # 单独保留颜色边界，同时避免同一条窄暗线被重复画成两侧轮廓。
-    edge *= np.float32(0.75) + np.float32(0.25) * support
-    edge = np.where(ridge_near >= config.high, 0, edge).astype(np.float32)
+    edge_supported = edge_thinned * (np.float32(0.75) + np.float32(0.25) * support)
+    edge = np.where(ridge_near >= config.high, 0, edge_supported).astype(np.float32)
     score = np.maximum(dark, np.float32(0.65) * edge).astype(np.float32)
     source = np.where(dark >= 0.65 * edge, 2, 1).astype(np.uint8)
     # 遮罩外占位不参与响应；最外一圈交由明确的轮廓笔画处理。
     interior = cv2.erode(mask.astype(np.uint8), np.ones((3, 3), np.uint8),
                         borderType=cv2.BORDER_CONSTANT, borderValue=1) > 0
     allowed = mask & (interior | protected) & ~suppressed
+    score_before_gate = score.copy()
     score[~allowed] = 0
     source[score == 0] = 0
     retained = hysteresis(score, mask, config.low, config.high)
     retained |= protected & (score >= config.low * 0.4)
     retained &= allowed
     skeleton = skeletonize(retained)
-    return LineFeatures(edge, dark, score, source, theta.copy(), q.copy(), support,
-                        retained, skeleton, protected.copy(), suppressed.copy())
+    features = LineFeatures(edge, dark, score, source, theta.copy(), q.copy(), support,
+                            retained, skeleton, protected.copy(), suppressed.copy())
+    stages: dict[str, FloatImage | Mask] = {
+        "dark_normalized": dark_normalized, "dark_clipped": dark_clipped,
+        "dark_nms": dark, "ridge_near": ridge_near,
+        "edge_normalized": edge_normalized, "edge_clipped": edge_clipped,
+        "edge_nms": edge_thinned, "edge_supported": edge_supported,
+        "edge_after_ridge": edge, "ridge_removed": (edge_supported > 0) & (edge == 0),
+        "score_before_gate": score_before_gate, "allowed": allowed, "score": score,
+        "weak": (score >= config.low) & allowed, "strong": (score >= config.high) & allowed,
+        "retained": retained, "skeleton": skeleton,
+    }
+    return features, stages
+
+
+def fuse_line_features(bank: FeatureBank, mask: Mask, protected: Mask, suppressed: Mask,
+                       config: StrokeConfig) -> LineFeatures:
+    return trace_line_features(bank, mask, protected, suppressed, config)[0]
 
 
 def trace_paths(skeleton: Mask) -> list[tuple[NDArray[np.int32], bool, bool, bool]]:

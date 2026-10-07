@@ -2,4 +2,4 @@
 extra-paths = ["src", ".deps"]
 
 [tool.ty.src]
-include = ["src", "tests", "run.py"]
+include = ["src", "tests", "run.py", "inspect_run.py"]

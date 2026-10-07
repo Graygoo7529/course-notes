@@ -207,6 +207,14 @@ rgba = compose_rgba(colors, lines, mask.astype("float32"), config.strength)
 
 ## 验证与记录
 
+需要逐通道、逐尺度检查特征及线条去留时，可以对已有 comic 结果另建观察页：
+
+~~~powershell
+python inspect_run.py --run outputs/comic-v07-selfie-final
+~~~
+
+打开新生成目录的 `index.html`，切换 RGB、尺度与处理步骤，点击像素查看方向卷积的 3×3 乘加，以及结构张量的逐通道贡献。支持局部放大、显示增益、阶段回放与滑动窗口；同时保存完整 PNG、NPZ、统计和 GIF。无需网络，不改变原有漫画结果。`--output` 指定新目录，`--crop X Y W H` 选择最大 256×256 的数值窗口；全图文件仍完整保存。更详细的范围和下一步改进见[线条诊断与改进](线条诊断与改进.md)。
+
 ~~~powershell
 conda activate d2l
 python -m unittest discover -s tests -v

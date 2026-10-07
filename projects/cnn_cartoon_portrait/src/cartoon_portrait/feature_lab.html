@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>漫画特征观察室</title>
+<style>
+:root{color-scheme:light;--ink:#22302f;--muted:#536962;--accent:#136b59;--line:#d9e1db;--paper:#fffefb}
+*{box-sizing:border-box}body{margin:0;background:#f2f4ef;color:var(--ink);font:15px/1.6 system-ui,"Microsoft YaHei",sans-serif}
+main{max-width:1260px;margin:auto;padding:26px}header{display:flex;gap:20px;justify-content:space-between;align-items:start}h1{font-size:29px;margin:0}h2{font-size:17px;margin:0 0 12px}p{margin:8px 0}small,.muted{color:var(--muted)}a{color:var(--accent)}
+.tag{color:var(--accent);font-size:12px;letter-spacing:.1em}.card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:19px;margin-top:16px}.controls{display:flex;gap:14px;align-items:end;flex-wrap:wrap}label{font-size:13px;color:var(--muted)}select,button,input{font:inherit;border:1px solid #b7c6bd;border-radius:6px;padding:7px 10px;background:#fff;color:var(--ink)}label select{display:block;max-width:320px}button{cursor:pointer}button:hover{background:#e5f0e8}button:disabled{opacity:.4;cursor:default}.primary{background:var(--accent);color:white}.primary:hover{background:#0f594a}button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #59b799;outline-offset:2px}
+.wide{flex:1;min-width:230px}.wide select{max-width:none;width:100%}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.images{display:grid;grid-template-columns:1fr 1fr;gap:16px}.canvas-wrap{min-width:0;text-align:center;background:#f5f5f2;border-radius:8px;padding:10px}canvas.full{max-width:100%;height:360px;object-fit:contain;image-rendering:pixelated;cursor:crosshair;touch-action:none}figcaption{font-size:13px;color:var(--muted);margin-top:7px}figure{margin:0}.explain{min-height:76px;border-left:3px solid #91bba7;padding-left:12px}.legend{font-size:12px;display:flex;gap:12px;flex-wrap:wrap}.blue{color:#265fb2}.red{color:#c62b39}.number{font:13px/1.5 ui-monospace,Consolas,monospace;font-variant-numeric:tabular-nums}
+table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px solid #e3e8e1;padding:6px;text-align:right}th:first-child,td:first-child{text-align:left}th{color:var(--muted);font-weight:500}.kernel{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin:12px 0}.kernel div{border:1px solid #dae3db;border-radius:5px;padding:7px;text-align:center;font-size:11px}.kernel b{display:block;font-size:13px}.zoom-row{display:flex;gap:16px;align-items:center;flex-wrap:wrap}.zoom-row canvas{width:228px;height:228px;image-rendering:pixelated;background:white}.badge{display:inline-block;background:#e7f0e9;border-radius:4px;padding:2px 7px;font-size:12px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.row input{width:78px}.metric{background:#f2f5ef;border-radius:8px;padding:12px}.metric strong{font-size:24px;display:block}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.reference{display:grid;grid-template-columns:repeat(4,1fr);gap:15px}.reference img{width:100%;height:220px;object-fit:contain}summary{cursor:pointer;font-weight:600}details{margin-top:12px}.equation{padding:10px;background:#f2f5ef;border-radius:6px;overflow-wrap:anywhere}.scroll{overflow-x:auto}.error{color:#a12121}footer{padding:25px 0;color:var(--muted);font-size:13px}
+@media(max-width:900px){main{padding:14px}.grid{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}canvas.full{height:300px}.reference{grid-template-columns:repeat(2,1fr)}header{display:block}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+</head>
+<body><main>
+<header><div><div class="tag">固定卷积 → 特征融合 → 笔画与填色</div><h1>漫画特征观察室</h1><p class="muted">看清每个通道提取了什么，以及一条线为什么留下、为什么消失。</p></div><div><a href="line-stages.gif">阶段动画</a> · <a href="manifest.json">完整记录</a> · <a href="trace.npz">原始状态 NPZ</a></div></header>
+<div class="card"><div class="metrics" id="metrics"></div><p id="scope" class="muted"></p></div>
+<section class="card">
+<div class="controls">
+<label>观察分支<select id="group"><option value="gaussian">① 高斯的横纵分解</option><option value="channels" selected>② 逐通道方向卷积</option><option value="fusion">③ 二次项与通道融合</option><option value="lines">④ 线条的逐步去留</option><option value="ablation">⑤ NMS 顺序对照</option><option value="color">⑥ 区域与明暗</option></select></label>
+<label>尺度 σ<select id="scale"></select></label><label>通道<select id="channel"><option value="0">R · 红</option><option value="1">G · 绿</option><option value="2">B · 蓝</option></select></label>
+<label class="wide">当前步骤<select id="stage"></select></label>
+<label>显示增益<select id="gain"><option value="1">1×</option><option value="2">2×</option><option value="4">4×</option><option value="8">8×</option></select></label>
+</div>
+<div class="row" style="margin-top:12px"><button id="prev">← 上一步</button><button id="next">下一步 →</button><button class="primary" id="play">逐步播放</button><button id="scan">滑动卷积窗口</button><button id="pause" disabled>暂停</button><span id="status" role="status" aria-live="polite" class="muted"></span></div>
+<div class="explain"><p id="explanation"></p><div id="legend" class="legend"></div></div>
+<div class="images"><figure class="canvas-wrap"><canvas id="photo" class="full" aria-label="原图，点击选择像素"></canvas><figcaption>原始照片 · 点击任一图选择同一位置</figcaption></figure><figure class="canvas-wrap"><canvas id="feature" class="full" aria-label="当前特征，点击选择像素"></canvas><figcaption id="feature-title"></figcaption></figure></div>
+<p class="muted">图中方框是 3×3 卷积邻域。图像按像素显示；背景无效区不能参与前景数值比较。<a id="full-map" target="_blank">打开当前全图 PNG</a></p>
+</section>
+<div class="grid">
+<section class="card"><h2>选中位置：空间卷积</h2><div class="row"><label>原图 x <input id="x" type="number"></label><label>原图 y <input id="y" type="number"></label><button id="locate">定位</button><label>方向 <select id="axis"><option value="x">gx · 左右变化</option><option value="y">gy · 上下变化</option></select></label></div>
+<p id="pixel" class="number"></p><div class="zoom-row"><canvas id="zoom" width="228" height="228" aria-label="当前特征的局部放大"></canvas><div><p><span class="badge" id="operator"></span></p><p>输入值 × 核系数 → 求和</p><p class="muted">每一格对应一个邻居。<br>使用前景延拓和反射边界，<br>与实际方向卷积一致。</p></div></div>
+<div id="kernel" class="kernel number"></div><div id="sum" class="equation number"></div>
+<details open><summary>高斯为什么能拆成两步？</summary><p>二维核 G = gᵧ gₓᵀ。先对每行加权，再对每列加权；RGB 独立执行。靠近人物边界时，对 MI 与 M 分别卷积，最后相除。</p><div id="gaussian" class="equation number"></div></details>
+</section>
+<section class="card"><h2>同一位置：通道融合</h2><p class="muted">先得到每通道 gx、gy，再构造二次项。固定 1×1 融合只发生在同一像素的通道之间。</p>
+<div class="scroll"><table><thead><tr><th>通道</th><th>权重</th><th>gx</th><th>gy</th><th>ω gx²</th><th>ω gx gy</th><th>ω gy²</th></tr></thead><tbody id="fusion"></tbody></table></div>
+<p id="tensor" class="equation number"></p><p id="eigen" class="equation number"></p><p id="direction" class="equation number"></p>
+<p class="muted">强度来自未做空间平滑的 J；方向一致性来自平滑后的 Jρ。二次乘积、特征值和角度计算都不是卷积。高 q 也可能发生在很弱的纹理中。</p>
+<details open><summary>这张特征图进入了哪里？</summary><p>最细尺度结构强度 → 边界候选；最细尺度 DoG 正部 → 暗线候选；跨尺度强度最大值 → 幅值支持。当前较粗尺度的 DoG、方向图没有进入线条追踪。</p><p>区域分支读取颜色和邻接结构权重。Lab 色度边缘图目前用于观察；它没有直接接入线条融合。像素梯度本身不能命名“眼睑”或“镜框”。</p></details>
+</section>
+</div>
+<section class="card"><h2>回到最后的画面</h2><div class="reference"><figure><a href="lines.png"><img src="lines.png" alt="重绘线稿"></a><figcaption>重绘笔画</figcaption></figure><figure><a href="regions.png"><img src="regions.png" alt="区域标签"></a><figcaption>区域标签，不是配色</figcaption></figure><figure><a href="flat_colors.png"><img src="flat_colors.png" alt="纯底色"></a><figcaption>纯底色</figcaption></figure><figure><a href="preview_light.png"><img src="preview_light.png" alt="本次原有漫画结果"></a><figcaption>存档中的漫画结果</figcaption></figure></div><p class="muted">观察页中的顺序对照仅改变 NMS 的输入顺序，尚未驱动这些最终图像。连通分量越少并不一定越好：误接镜框与眼睑也会降低分量数。</p></section>
+<footer>所有计算与图像保存在本地，可离线打开。显示色与原始数值分开保存。逐步动画由真实中间状态生成，不代表新算法的效果。</footer>
+</main>
+<script src="trace-data.js"></script>
+<script>
+"use strict";
+const T=window.TRACE, $=id=>document.getElementById(id), [ox,oy,W,H]=T.crop_xywh;
+const cache=new Map();
+function decode(text){const bytes=Uint8Array.from(atob(text),c=>c.charCodeAt(0));return new Float32Array(bytes.buffer)}
+function values(key){if(!cache.has(key))cache.set(key,decode(T.data[key]));return cache.get(key)}
+const mask=decode(T.mask),input=decode(T.input),pad=T.padded_guides.map(decode);
+const photoBuffer=document.createElement('canvas'),featureBuffer=document.createElement('canvas');
+for(const c of [photoBuffer,featureBuffer,$('photo'),$('feature')]){c.width=W;c.height=H}
+const original=photoBuffer.getContext('2d').createImageData(W,H);
+for(let i=0;i<W*H;i++){for(let c=0;c<3;c++)original.data[4*i+c]=Math.round(input[3*i+c]*255);original.data[4*i+3]=255}
+photoBuffer.getContext('2d').putImageData(original,0,0);
+let x=Math.floor(W/2),y=Math.floor(H/2),selected=[],timer=null,scanOrigin=0;
+function fmt(v){return Number.isFinite(v)?Number(v).toPrecision(5):'—'}
+function at(key){return values(key)[y*W+x]}
+function prefix(){return 's'+$('scale').value+'_'}
+function current(){return selected[$('stage').selectedIndex]}
+function stop(){if(timer!==null)clearInterval(timer);timer=null;$('pause').disabled=true;$('status').textContent=''}
+function selectStages(preserve=false){
+  const signature=m=>m?.key.replace(/^s\d+_/,'').replace(/_\d+$/,''),previous=signature(current()),g=$('group').value,k=+$('scale').value,c=+$('channel').value;
+  selected=T.maps.filter(m=>m.group===g&&(m.scale<0||m.scale===k)&&(m.channel<0||m.channel===c));
+  $('stage').replaceChildren(...selected.map(m=>{const o=document.createElement('option');o.value=m.key;o.textContent=m.title;return o}));
+  if(preserve&&previous){const index=selected.findIndex(m=>signature(m)===previous);if(index>=0)$('stage').selectedIndex=index}
+  refresh();
+}
+function paint(){
+ const m=current(),a=values(m.key),ctx=featureBuffer.getContext('2d'),data=ctx.createImageData(W,H);
+ const unmasked=m.key.includes('numerator')||m.key.includes('denominator');
+ for(let i=0;i<W*H;i++){
+   let v=Math.max(m.signed?-1:0,Math.min(1,a[i]/m.limit*Number($('gain').value))),rgb;
+   if(m.signed){const p=Math.abs(v),col=v>=0?[198,43,57]:[38,95,178];rgb=col.map(n=>(1-p)*245+p*n)}else rgb=[255*(1-v),255*(1-v),255*(1-v)];
+   if(!mask[i]&&!unmasked)rgb=[255,255,255];
+   for(let c=0;c<3;c++)data.data[4*i+c]=Math.round(rgb[c]);data.data[4*i+3]=255;
+ }ctx.putImageData(data,0,0);
+ $('explanation').textContent=m.explanation;
+ $('legend').replaceChildren();
+ const texts=m.signed?['蓝色：负响应','浅色：接近零','红色：正响应']:['白色：低值','黑色：高值'];
+ texts.push('单位：'+m.unit,'显示量程：'+(m.signed?'±':'0–')+fmt(m.limit/Number($('gain').value)),'显示增益仅调对比度，数值不变');
+ for(const [i,t]of texts.entries()){const span=document.createElement('span');span.textContent=t;if(m.signed&&i===0)span.className='blue';if(m.signed&&i===2)span.className='red';$('legend').append(span)}
+ $('feature-title').textContent=m.title;$('full-map').href=m.file;
+}
+function cursor(){
+ for(const [id,buffer]of [['photo',photoBuffer],['feature',featureBuffer]]){const ctx=$(id).getContext('2d');ctx.drawImage(buffer,0,0);ctx.strokeStyle='#00a47b';ctx.lineWidth=.7;ctx.strokeRect(x-1,y-1,3,3)}
+ const z=$('zoom').getContext('2d');z.imageSmoothingEnabled=false;z.fillStyle='#fff';z.fillRect(0,0,228,228);
+ // 19×19 邻域保持像素；靠近画面边界的缺失部分留白。
+ const left=Math.max(0,x-9),top=Math.max(0,y-9),right=Math.min(W,x+10),bottom=Math.min(H,y+10);
+ z.drawImage(featureBuffer,left,top,right-left,bottom-top,(left-x+9)*12,(top-y+9)*12,(right-left)*12,(bottom-top)*12);
+ z.strokeStyle='#13a179';z.lineWidth=2;z.strokeRect(8*12,8*12,36,36);z.strokeStyle='#8dbaa7';z.lineWidth=1;
+ for(let i=0;i<=19;i++){z.beginPath();z.moveTo(i*12,0);z.lineTo(i*12,228);z.stroke();z.beginPath();z.moveTo(0,i*12);z.lineTo(228,i*12);z.stroke()}
+ $('x').value=x+ox;$('y').value=y+oy;
+ const v=at(current().key);$('pixel').textContent=`(${x+ox}, ${y+oy}) · 当前值 ${fmt(v)} · ${mask[y*W+x]?'人物内':'遮罩外，无效占位'}`;
+}
+function numbers(){
+ const k=+$('scale').value,c=+$('channel').value,p=prefix(),axis=$('axis').value,K=T.kernels[axis],P=pad[k];
+ $('operator').textContent=T.operator.toUpperCase()+' · '+['R','G','B'][c]+' · σ='+T.scales[k];
+ let sum=0;$('kernel').replaceChildren();
+ for(let dy=0;dy<3;dy++)for(let dx=0;dx<3;dx++){
+  const i=dy*3+dx,v=P[((y+dy)*(W+2)+x+dx)*3+c],product=v*K[i];sum+=product;
+  const cell=document.createElement('div');cell.innerHTML=`${fmt(v)} × ${fmt(K[i])}<b>${fmt(product)}</b>`;$('kernel').append(cell);
+ }
+ const actual=at(p+'g'+axis+'_'+c);$('sum').textContent=`邻域乘加 = ${fmt(sum)}；记录的 g${axis} = ${fmt(actual)}。`+(mask[y*W+x]?`差值 ${fmt(sum-actual)}（浮点舍入）。`:'该位置在遮罩外，生产管道将输出置零。');
+ $('fusion').replaceChildren();let xx=0,xy=0,yy=0;
+ for(let channel=0;channel<3;channel++){
+  const gx=at(p+'gx_'+channel),gy=at(p+'gy_'+channel),w=T.weights[channel],a=w*gx*gx,b=w*gx*gy,d=w*gy*gy;xx+=a;xy+=b;yy+=d;
+  const row=document.createElement('tr');for(const val of [['R','G','B'][channel],fmt(w),fmt(gx),fmt(gy),fmt(a),fmt(b),fmt(d)]){const cell=document.createElement('td');cell.textContent=val;row.append(cell)}$('fusion').append(row);
+ }
+ $('tensor').textContent=`J = [[${fmt(xx)}, ${fmt(xy)}], [${fmt(xy)}, ${fmt(yy)}]]`;
+ const gap=Math.hypot(xx-yy,2*xy),large=Math.max(0,(xx+yy+gap)/2),small=Math.max(0,(xx+yy-gap)/2);
+ $('eigen').textContent=`λmax=${fmt(large)}；λmin=${fmt(small)}；σ√λmax=${fmt(T.scales[k]*Math.sqrt(large))}；存档=${fmt(at(p+'edge'))}`;
+ const sx=at(p+'jsxx'),sxy=at(p+'jsxy'),sy=at(p+'jsyy'),trace=sx+sy,sgap=Math.hypot(sx-sy,2*sxy),q=trace>1e-12?sgap/trace:0;
+ const angle=(mask[y*W+x]&&trace>1e-12&&q>1e-4)?((Math.atan2(2*sxy,sx-sy)/2+Math.PI/2)*180/Math.PI)%180:null;
+ $('direction').textContent=`平滑后 Jρ = [[${fmt(sx)}, ${fmt(sxy)}], [${fmt(sxy)}, ${fmt(sy)}]]；q=${fmt(q)}；切向角=${angle===null?'无可靠方向':fmt(angle)+'°（模180°）'}`;
+ const nx=at(p+'numerator_x_'+c),n=at(p+'numerator_xy_'+c),dx=at(p+'denominator_x'),d=at(p+'denominator_xy'),guide=at(p+'guide_'+c);
+ $('gaussian').textContent=`横向分子=${fmt(nx)}，分母=${fmt(dx)}；纵向后分子=${fmt(n)}，分母=${fmt(d)}；${mask[y*W+x]&&d>1e-7?'比值='+fmt(n/d):'遮罩外或无支持'}；存档 guide=${fmt(guide)}。全图重算最大差=${fmt(T.statistics.saved_input_gaussian_max_error)}。`;
+}
+function refresh(){paint();cursor();numbers();$('prev').disabled=$('stage').selectedIndex===0;$('next').disabled=$('stage').selectedIndex===selected.length-1}
+for(const [k,s]of T.scales.entries()){const opt=document.createElement('option');opt.value=k;opt.textContent=s+' 原图像素';$('scale').append(opt)}
+for(const id of ['group','scale','channel'])$(id).onchange=()=>{stop();selectStages(id!=='group')};
+$('stage').onchange=()=>{stop();refresh()};$('axis').onchange=numbers;
+$('gain').onchange=refresh;
+for(const [id,delta]of [['prev',-1],['next',1]])$(id).onclick=()=>{stop();$('stage').selectedIndex=Math.max(0,Math.min(selected.length-1,$('stage').selectedIndex+delta));refresh()};
+$('play').onclick=()=>{stop();$('pause').disabled=false;$('status').textContent='按当前分支逐步回放';timer=setInterval(()=>{$('stage').selectedIndex=($('stage').selectedIndex+1)%selected.length;refresh()},1400)};
+$('scan').onclick=()=>{stop();scanOrigin=x;$('pause').disabled=false;$('status').textContent='沿当前行扫描 ±8 像素';let step=0;timer=setInterval(()=>{x=Math.max(0,Math.min(W-1,scanOrigin-8+(step++%17)));cursor();numbers()},350)};
+$('pause').onclick=stop;
+for(const id of ['photo','feature'])$(id).onclick=e=>{
+ stop();const r=$(id).getBoundingClientRect(),scale=Math.min(r.width/W,r.height/H),rw=W*scale,rh=H*scale;
+ const px=(e.clientX-r.left-(r.width-rw)/2)/scale,py=(e.clientY-r.top-(r.height-rh)/2)/scale;
+ if(px>=0&&px<W&&py>=0&&py<H){x=Math.floor(px);y=Math.floor(py);cursor();numbers()}
+};
+function locate(){stop();x=Math.max(0,Math.min(W-1,Math.round(Number($('x').value))-ox));y=Math.max(0,Math.min(H-1,Math.round(Number($('y').value))-oy));cursor();numbers()}
+for(const id of ['x','y']){$(id).min=id==='x'?ox:oy;$(id).max=id==='x'?ox+W-1:oy+H-1;$(id).onkeydown=e=>{if(e.key==='Enter')locate()}}
+$('locate').onclick=locate;
+document.addEventListener('visibilitychange',()=>{if(document.hidden)stop()});
+const S=T.statistics;
+for(const [value,label]of [[S.kept_internal_paths,'条内部路径'],[S.kept_paths_under_5px,'条短于 5 像素'],[S.thinning_removed_pixels,'像素由正常细化移除'],[S.path_removed_pixels,'骨架像素未被路径保留']]){const node=document.createElement('div');node.className='metric';const strong=document.createElement('strong');strong.textContent=value;node.append(strong,document.createTextNode(label));$('metrics').append(node)}
+$('scope').textContent=`原图 ${T.original_shape[1]}×${T.original_shape[0]}；数值窗口 (${ox},${oy}) 起 ${W}×${H}，保持原像素。全图 PNG 与 NPZ 另存。重放线条最大差 ${fmt(Math.max(...Object.values(S.replay_max_errors)))}。路径数不包含外轮廓；短路径不自动等于错误。`;
+selectStages();
+</script>
+</body></html>

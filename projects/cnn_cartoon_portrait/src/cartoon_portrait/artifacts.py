@@ -1,4 +1,4 @@
-"""结果导出与合成测试图，不参与七个核心函数的计算。"""
+"""结果导出、特征可视化与合成测试图；文件副作用集中于本层。"""
 
 import json
 from dataclasses import asdict
@@ -6,9 +6,10 @@ from importlib.metadata import version
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from .pipeline import Config, FloatImage, Labels, Mask, save_png
+from .workflow import StyleConfig, StyleResult
 
 
 def load_mask(path: Path, shape: tuple[int, ...]) -> Mask:
@@ -52,9 +53,10 @@ def export_results(
     colors: FloatImage,
     lines: FloatImage,
     rgba: FloatImage,
-    config: Config,
+    config: Config | StyleConfig,
     metadata: dict[str, object],
     labels: Labels | None = None,
+    *, result: StyleResult | None = None,
 ) -> Path:
     """每次使用新目录，避免覆盖原图或上一次实验。"""
     directory.mkdir(parents=True, exist_ok=False)
@@ -80,16 +82,19 @@ def export_results(
         "lines_png": "display intensity = 1 - E; white means no ink",
         "dependencies": {name: version(name) for name in ("numpy", "opencv-python", "Pillow")},
     }
+    if result is not None:
+        details["diagnostics"] = _export_diagnostics(directory, mask, result)
     (directory / "parameters.json").write_text(
         json.dumps(details, ensure_ascii=False, indent=2) + "\n", encoding="utf-8",
     )
-    _overview(directory, image, mask, base, colors, lines, light)
+    _overview(directory, image, mask, base, colors, lines, light, structured=result is not None)
     return directory / "cartoon.png"
 
 
 def _overview(
     directory: Path, image: FloatImage, mask: Mask, base: FloatImage,
     colors: FloatImage, lines: FloatImage, result: FloatImage,
+    *, structured: bool = False,
 ) -> None:
     font_path = Path("C:/Windows/Fonts/msyh.ttc")
     font = ImageFont.truetype(str(font_path), 19) if font_path.exists() else ImageFont.load_default(size=19)
@@ -98,6 +103,12 @@ def _overview(
         if font_path.exists()
         else ["1 Input", "2 Foreground mask", "3 Gaussian smoothing", "4 Lab quantization", "5 Sobel lines", "6 Cartoon"]
     )
+    if structured:
+        captions = (
+            ["1 原图", "2 人物遮罩", "3 轻度去噪", "4 保边色块", "5 融合结构描线", "6 漫画合成"]
+            if font_path.exists() else
+            ["1 Input", "2 Foreground", "3 Light denoising", "4 Edge-aware colors", "5 Fused lines", "6 Cartoon"]
+        )
     board = Image.new("RGB", (1080, 760), "#eeeeee")
     draw = ImageDraw.Draw(board)
     arrays = [
@@ -111,10 +122,74 @@ def _overview(
     for index, (caption, array) in enumerate(zip(captions, arrays)):
         left, top = (index % 3) * 360, (index // 3) * 380
         tile = Image.fromarray(np.rint(array * 255).astype(np.uint8))
-        tile.thumbnail((336, 326), Image.Resampling.LANCZOS)
+        # 小图也放大，便于检查镜框等细节；这只影响展示，不改变处理结果。
+        tile = ImageOps.contain(tile, (336, 326), Image.Resampling.BILINEAR)
         board.paste(tile, (left + (360 - tile.width) // 2, top + 42 + (326 - tile.height) // 2))
         draw.text((left + 14, top + 9), caption, font=font, fill="#222222")
     board.save(directory / "overview.png")
+
+
+def _export_diagnostics(directory: Path, mask: Mask, result: StyleResult) -> dict[str, object]:
+    features, structure = result.features, result.structure
+    color, line = result.color_debug, result.line_debug
+    arrays = {
+        "mask": mask, "guide": features.guide, "gx": features.gx, "gy": features.gy,
+        "channel_strength": features.channel_strength,
+        "jxx": structure.jxx, "jxy": structure.jxy, "jyy": structure.jyy,
+        "strength": structure.strength, "theta": structure.theta,
+        "coherence": structure.coherence, "direction_valid": structure.direction_valid,
+        "weight_right": color.weight_right, "weight_down": color.weight_down,
+        "base_lightness": color.base, "detail_lightness": color.detail,
+        "mapped_lightness": color.mapped, "thinned": line.thinned,
+        "retained": line.retained, "ink": result.lines, **result.comparisons,
+    }
+    # 原始有符号特征存入 NPZ，PNG 仅为显示，不能反推原始响应尺度。
+    np.savez_compressed(directory / "features.npz", allow_pickle=False, **arrays)
+    _save_rgb(features.guide, directory / "guide.png")
+    responses = [features.channel_strength[..., c] for c in range(3)]
+    responses += [result.comparisons["gray_strength"], result.comparisons["magnitude_sum"], structure.strength]
+    response_scale = max(0.05, *(float(array.max()) for array in responses))
+    detail_scale = max(0.01, float(np.max(np.abs(color.detail))))
+
+    def plane(name: str, values: FloatImage) -> None:
+        display = np.where(mask, np.clip(values, 0, 1), 1)
+        Image.fromarray(np.rint(display * 255).astype(np.uint8)).save(directory / name)
+
+    names = ["response_red", "response_green", "response_blue", "response_gray", "response_sum", "response_fused"]
+    for name, values in zip(names, responses):
+        plane(name + ".png", 1 - values / response_scale)
+    plane("coherence.png", structure.coherence)
+    plane("boundary_weights.png", color.boundary)
+    plane("base_lightness.png", color.base)
+    plane("detail_lightness.png", .5 + .5 * color.detail / detail_scale)
+    plane("mapped_lightness.png", color.mapped)
+    plane("lines_thinned.png", 1 - line.thinned / response_scale)
+    plane("lines_retained.png", 1 - line.retained.astype(np.float32))
+    plane("outline.png", 1 - line.outline)
+    font_path = Path("C:/Windows/Fonts/msyh.ttc")
+    font = ImageFont.truetype(str(font_path), 18) if font_path.exists() else ImageFont.load_default(size=18)
+    captions = (["R 通道", "G 通道", "B 通道", "先灰度再差分", "逐通道幅值加权", "结构矩阵融合"]
+                if font_path.exists() else ["R", "G", "B", "Gray first", "Magnitude sum", "Structure fusion"])
+    board = Image.new("RGB", (1080, 760), "#eeeeee")
+    draw = ImageDraw.Draw(board)
+    for index, (name, caption) in enumerate(zip(names, captions)):
+        left, top = index % 3 * 360, index // 3 * 380
+        with Image.open(directory / (name + ".png")) as opened:
+            tile = ImageOps.contain(opened.convert("RGB"), (336, 326), Image.Resampling.BILINEAR)
+        board.paste(tile, (left + (360 - tile.width) // 2, top + 42 + (326 - tile.height) // 2))
+        draw.text((left + 14, top + 9), caption, font=font, fill="#222222")
+    board.save(directory / "features_overview.png")
+    return {
+        "response_display_scale": response_scale,
+        "response_png": "1 - response/scale; all six maps share one scale",
+        "detail_display_scale": detail_scale,
+        "detail_png": "0.5 + 0.5*detail/scale; gray means zero",
+        "background": "invalid outside mask; scalar diagnostic PNGs use white",
+        "solver": "matrix-free Jacobi PCG, float64 internal, true residual checked before float32 output",
+        "solver_max_relative_residual": color.solver_residual,
+        "solver_max_iterations": color.solver_iterations,
+        "theta": "radians, modulo pi; consult direction_valid and coherence",
+    }
 
 
 def make_demo() -> tuple[FloatImage, Mask, tuple[int, int, int, int]]:
@@ -159,4 +234,3 @@ def make_demo() -> tuple[FloatImage, Mask, tuple[int, int, int, int]]:
     noise = rng.normal(0, 0.009, image.shape)
     image = np.clip(image + (shading + noise) * mask[..., None], 0, 1).astype(np.float32)
     return image, mask, (48, 45, 384, height - 45)
-

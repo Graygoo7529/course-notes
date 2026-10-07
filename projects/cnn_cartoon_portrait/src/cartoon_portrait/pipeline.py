@@ -1,4 +1,4 @@
-"""七个公开函数：RGB/RGBA 为 float32 [0,1]，遮罩为 bool。
+"""共享图像接口与第一版对照：RGB/RGBA 为 float32 [0,1]，遮罩为 bool。
 
 内部颜色约定为 RGB。所有处理均保留 H、W，不修改调用者传入的数组。
 """
@@ -133,26 +133,44 @@ def segment_person(image: FloatImage, selection: Selection) -> Mask:
 def smooth_foreground(image: FloatImage, mask: Mask, sigma: float = 1.5) -> FloatImage:
     """B = G*(M I) / (G*M)；背景输出为 0，其数值不表示前景颜色。"""
     _unit_array(image, "image", 3)
+    return np.clip(masked_gaussian(image, mask, sigma), 0, 1)
+
+
+def _float_array(array: FloatImage, name: str) -> None:
+    """空间信号可有符号；与颜色的 [0,1] 验证分开。"""
+    if array.ndim not in (2, 3) or array.dtype != np.float32 or array.size == 0:
+        raise ValueError(f"{name} 必须是非空 float32 H×W 或 H×W×C 数组。")
+    if not np.isfinite(array).all():
+        raise ValueError(f"{name} 不能含 NaN/Inf。")
+
+
+def masked_gaussian(image: FloatImage, mask: Mask, sigma: float) -> FloatImage:
+    """支持有符号单/多通道信号；先分别横纵卷积，再按前景权重归一化。"""
+    _float_array(image, "image")
     _mask(mask, image.shape)
     _number(sigma, "sigma", 0)
     if sigma == 0:
-        return np.where(mask[..., None], image, np.float32(0))
+        return np.where(mask[..., None] if image.ndim == 3 else mask, image, np.float32(0))
 
     radius = max(1, int(np.ceil(3 * sigma)))
     kernel = cv2.getGaussianKernel(2 * radius + 1, sigma, cv2.CV_32F)
     weight = mask.astype(np.float32)
     # sepFilter2D 显式体现二维高斯的空间可分离性；RGB 各通道独立计算。
     numerator = cv2.sepFilter2D(
-        image * weight[..., None], -1, kernel, kernel, borderType=cv2.BORDER_REFLECT_101,
+        image * (weight[..., None] if image.ndim == 3 else weight),
+        -1, kernel, kernel, borderType=cv2.BORDER_REFLECT_101,
     )
+    if image.ndim == 3 and numerator.ndim == 2:
+        numerator = numerator[..., None]
     denominator = cv2.sepFilter2D(
         weight, -1, kernel, kernel, borderType=cv2.BORDER_REFLECT_101,
     )
     valid = mask & (denominator > np.finfo(np.float32).eps)
     result = np.zeros_like(image)
-    result[valid] = numerator[valid] / denominator[valid, None]
+    divisor = denominator[valid, None] if image.ndim == 3 else denominator[valid]
+    result[valid] = numerator[valid] / divisor
     result[mask & ~valid] = image[mask & ~valid]
-    return np.clip(result, 0, 1)
+    return result
 
 
 def quantize_colors(
@@ -184,7 +202,7 @@ def _extend_foreground(gray: FloatImage, mask: Mask) -> FloatImage:
         (~mask).astype(np.uint8), cv2.DIST_L2, 5, labelType=cv2.DIST_LABEL_PIXEL,
     )
     labels = labels.astype(np.int32, copy=False)
-    lookup = np.zeros(int(labels.max()) + 1, dtype=np.float32)
+    lookup = np.zeros((int(labels.max()) + 1, *gray.shape[2:]), dtype=np.float32)
     lookup[labels[mask]] = gray[mask]
     return lookup[labels]
 

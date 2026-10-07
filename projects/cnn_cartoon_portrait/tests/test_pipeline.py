@@ -24,7 +24,7 @@ from cartoon_portrait.pipeline import (
     Config, Selection, compose_rgba, extract_lines, quantize_colors, read_image,
     save_png, segment_person, smooth_foreground,
 )
-from cartoon_portrait.selection import collect_selection
+from cartoon_portrait.selection import ViewConfig, collect_selection, make_preview
 
 
 class OperatorTests(unittest.TestCase):
@@ -142,6 +142,10 @@ class SegmentationTests(unittest.TestCase):
         callbacks: list[object] = []
         expected = np.zeros(image.shape[:2], dtype=bool)
         expected[45:560, 48:432] = True
+        view_config = ViewConfig(max_scale=1)
+        _, transform = make_preview(
+            image, np.full(image.shape[:2], 2, dtype=np.uint8), config=view_config,
+        )
 
         def register(name: str, callback: object) -> None:
             callbacks.append(callback)
@@ -150,8 +154,8 @@ class SegmentationTests(unittest.TestCase):
             if len(keys) == 2:
                 callback = callbacks[0]
                 assert callable(callback)
-                callback(cv2.EVENT_LBUTTONDOWN, 48, 45 + 60, 0, None)
-                callback(cv2.EVENT_LBUTTONUP, 431, 559 + 60, 0, None)
+                callback(cv2.EVENT_LBUTTONDOWN, 48 + transform.offset_x, 45 + transform.offset_y, 0, None)
+                callback(cv2.EVENT_LBUTTONUP, 431 + transform.offset_x, 559 + transform.offset_y, 0, None)
             return keys.pop(0)
 
         keys = [13, 32]
@@ -161,11 +165,11 @@ class SegmentationTests(unittest.TestCase):
             patch("cartoon_portrait.selection.cv2.imshow"),
             patch("cartoon_portrait.selection.cv2.waitKey", side_effect=key_events),
             patch("cartoon_portrait.selection.cv2.getWindowProperty", return_value=1),
-            patch("cartoon_portrait.selection.cv2.destroyAllWindows"),
+            patch("cartoon_portrait.selection.cv2.destroyWindow"),
             patch("cartoon_portrait.selection.segment_person", return_value=expected),
             contextlib.redirect_stdout(io.StringIO()),
         ):
-            mask, labels = collect_selection(image)
+            mask, labels = collect_selection(image, view_config=view_config)
         np.testing.assert_array_equal(mask, expected)
         self.assertTrue((labels[expected] == cv2.GC_PR_FGD).all())
         self.assertTrue((labels[~expected] == cv2.GC_BGD).all())
@@ -242,4 +246,3 @@ class FilePipelineTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

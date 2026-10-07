@@ -309,7 +309,7 @@ class PreviewAndWorkflowTests(unittest.TestCase):
             Image.fromarray(np.full((13, 19), 255, np.uint8)).save(root / "mask.png")
             arguments = ["--input", str(root / "照片.png"), "--mask", str(root / "mask.png")]
             structured = root / "structure"
-            self.assertEqual(main(arguments + ["--output", str(structured)]), 0)
+            self.assertEqual(main(arguments + ["--pipeline", "structure", "--output", str(structured)]), 0)
             with np.load(structured / "features.npz", allow_pickle=False) as features:
                 self.assertEqual(features["gx"].shape, (13, 19, 3))
                 self.assertLess(float(features["gx"].min()), 0)
@@ -326,7 +326,7 @@ class PreviewAndWorkflowTests(unittest.TestCase):
             self.assertEqual(main(arguments + ["--pipeline", "baseline", "--output", str(baseline)]), 0)
             self.assertFalse((baseline / "features.npz").exists())
             with contextlib.redirect_stderr(io.StringIO()):
-                self.assertEqual(main(arguments + ["--transition", "0", "--output", str(root / "invalid")]), 2)
+                self.assertEqual(main(arguments + ["--pipeline", "structure", "--transition", "0", "--output", str(root / "invalid")]), 2)
             self.assertFalse((root / "invalid").exists())
 
 

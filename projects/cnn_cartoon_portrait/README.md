@@ -1,10 +1,10 @@
 # 自拍人像漫画化
 
-输入一张自拍，交互标记人物，用固定卷积与图像处理输出透明背景漫画。当前默认流程为：
+输入一张自拍，交互标记人物，用固定卷积与图像处理输出透明背景漫画。当前默认版本为 v0.7：
 
-**逐通道轻度去噪与方向响应 → 结构融合 → 保边色块与线条双分支 → RGBA 合成。**
+**多尺度逐通道特征 → 线条／区域／明暗三个任务分支 → 独立笔画、区域底色与阴影 → 高分辨率重绘。**
 
-核心计算保持原图尺寸，在 CPU 上运行，无需训练集、预训练模型或显卡。GrabCut 根据当前照片估计颜色模型，需要框选或前景/背景笔划。第一版仍可通过 `--pipeline baseline` 运行，便于比较。
+特征分析保持原图尺寸，默认在 4 倍画布绘制，在 CPU 上运行，无需训练集、预训练模型或显卡。GrabCut 根据当前照片估计颜色模型，需要框选或前景/背景笔划。`--pipeline structure` 保留 v0.6，`--pipeline baseline` 保留第一版。
 
 ## 快速开始
 
@@ -28,7 +28,7 @@ python -m pip install --target .deps -r requirements-dev.txt
 python run.py --input "A:\AogoDesk\Pictures\一寸照片\一寸照片.jpg" --interactive
 ~~~
 
-小图预览最多放大 4 倍，并受显示尺寸限制。例如 $150\times197$ 可显示为 $600\times788$。照片用双线性插值，标签用最近邻；处理、笔划和导出均使用原图坐标。`--preview-scale 1` 可关闭预览放大。EXIF 方向在标记前校正。
+小图预览最多放大 4 倍，并受显示尺寸限制。例如 $150\times197$ 可显示为 $600\times788$。照片用双线性插值，标签用最近邻；标记和特征分析使用原图坐标。`--preview-scale 1` 可关闭交互预览放大，`--render-scale 1` 则控制最终绘制尺寸，两者独立。EXIF 方向在标记前校正。
 
 | 操作 | 用途 |
 | --- | --- |
@@ -55,12 +55,42 @@ python run.py --input outputs/20261006-231358-781351/input.png --mask outputs/20
 
 ~~~powershell
 python run.py --input data/input/selfie.jpg --mask outputs/your-run/mask.png --pipeline baseline
-python run.py --input data/input/selfie.jpg --mask outputs/your-run/mask.png --no-thin
+python run.py --input data/input/selfie.jpg --mask outputs/your-run/mask.png --pipeline structure --no-thin
 ~~~
 
 第一条运行原有高斯、硬明度量化和灰度 Sobel；第二条仅关闭新版的线条细化。对照时应固定照片、遮罩与处理尺寸，并记录阈值变化。
 
-## 参数
+## 漫画重绘参数
+
+默认入口是 `--pipeline comic`。例如复用已经确认的遮罩：
+
+~~~powershell
+python run.py --input outputs/structure-v06-selfie/input.png --mask outputs/structure-v06-selfie/mask.png
+python run.py --input data/input/selfie.jpg --interactive --palette-size 6 --line-width 0.8 --render-scale 4
+~~~
+
+| 参数 | 默认 | 含义 |
+| --- | --- | --- |
+| `--scales` | 0.6 1.2 2.4 | 多尺度高斯，单位原图像素，严格递增；`--sigma s` 可快捷设为 s、2s、4s |
+| `--palette-size` | 6 | 当前图像的颜色原型数；连通区域数可能更多 |
+| `--palette` | 自动取色 | 一组带引号的六位 RGB，例如 `"#dbaa8a" "#30282a" "#427576"`；将底色映射到给定配色 |
+| `--region-smoothness` | 6 | 区域描述与区域内基础明度的 WLS 强度 |
+| `--line-width` / `--contour-width` | 0.8 / 1.1 | 内部主线与外轮廓宽度，原图像素；轮廓取 0 可关闭 |
+| `--line-low` / `--line-high` | 0.2 / 0.48 | 新版候选分数的连通阈值，不能照搬 v0.6 梯度阈值 |
+| `--ink-color` / `--strength` | #1f1a24 / 0.92 | 独立墨色与笔画透明度 |
+| `--min-line-length` | 2 | 短路径筛选长度；有保护标记的短线可保留 |
+| `--shadow-depth` / `--shadow-fraction` | 9 / 0.25 | 阴影的 Lab 明度差、候选分位数；深度 0 关闭阴影，平坦区域自动跳过 |
+| `--shadow-style` | warm | 阴影色相可选 warm、cool、neutral |
+| `--render-scale` / `--supersample` | 4 / 1 | 最终绘制倍率、内部额外超采样；后者不会改变最终图片尺寸 |
+| `--protect-lines` / `--suppress-lines` | 无 | 与原图同尺寸的单通道 0/255 PNG；白色保护已有弱线或删除内部候选线 |
+
+保护提示不会凭空补画缺失的线，也不代替人物 mask；保护位置还会阻止小区域被合并。提示不能位于人物外，保护与删除不能重叠。删除提示不修改独立外轮廓。当前不额外打开五官标记窗口，提示通过文件提供；原来的 F/B 仍只标记人物与背景。
+
+画布按 `原图像素数 × (render-scale × supersample)²` 限制为 2400 万像素，超出时会在特征分析前提示降低倍率。大图应先选较低绘制倍率；分析尺度仍以原图像素计，尚未自动估计人脸大小。
+
+旧路线专用参数在 comic 模式下会明确报错，避免误以为它们已经生效。
+
+## v0.6 参数
 
 以下为结构路线的默认值；第一版保留自己的参数默认值。
 
@@ -84,6 +114,28 @@ python run.py --input data/input/selfie.jpg --mask outputs/your-run/mask.png --n
 脸部黑线过多时，先提高筛选阈值；只是线条过深时，降低 `strength` 或增大 `softness`。明度分界过强时，降低 `amount` 或增大 `transition`。先固定遮罩，一次改变一个主要因素。`python run.py --help` 显示全部参数。
 
 ## 输出与特征
+
+comic 模式默认输出 `cartoon.png`、浅／深背景预览，以及以下过程材料。打开 `report.html` 可逐阶段浏览原尺寸图片。
+
+| 文件 | 内容 |
+| --- | --- |
+| `overview.png` | 原图、区域编号、纯底色、阴影遮罩、独立笔画、最终结果 |
+| `features_overview.png` | 多尺度方向、色度变化、暗结构与方向场 |
+| `lines_overview.png` | 边界／暗线候选、筛选、删除、路径叠回原图、绘制结果 |
+| `response_red_*.png` 等、`edge_scale_*.png`、`dog_scale_*.png` | 各通道／尺度；有符号 DoG 的中灰代表零 |
+| `regions_initial.png` / `regions.png` | 小区域合并前后；标签色不代表配色 |
+| `flat_colors.png` / `colors.png` / `rendered_colors.png` | 原尺寸底色／含阴影填色、目标尺寸填色 |
+| `shadow_candidate.png` / `shadow.png` | 阴影候选与连通整理结果 |
+| `skeleton.png` / `stroke_overlay.png` / `lines.png` | 骨架、原图坐标上的路径、目标尺寸线稿 |
+| `strokes.json` / `palette.json` | 原图坐标路径及线宽、墨色配置见参数文件；区域底色、阴影色及阈值 |
+| `features.npz` / `render.npz` | 有符号原始特征、标签和配色／目标尺寸覆盖率与着墨强度 |
+| `parameters.json` | 实际配置、输入来源、显示尺度、输出尺寸、求解残差与处理耗时 |
+
+Sobel 方向响应 `gx/gy` 为 K×H×W×3，融合响应与 DoG 为 K×H×W；`theta` 是法向，`directions.png` 展示切向。区域标签 0 为背景。最终 alpha 来自轮廓覆盖率，含半透明抗锯齿像素；它不等同于发丝抠图或真实透明度估计。
+
+各类响应有不同单位，同类尺度共享显示范围，具体映射记录在参数文件。计算使用原始数组；PNG 仅用于观察。
+
+以下表格对应 `--pipeline structure` 的兼容输出：
 
 每次运行在 `outputs` 下创建新目录。结果以非预乘 RGBA 保存，透明度只在背景合成时应用一次。
 
@@ -110,6 +162,24 @@ python run.py --input data/input/selfie.jpg --mask outputs/your-run/mask.png --n
 
 ## 函数管道
 
+[comic.py](src/cartoon_portrait/comic.py) 中的 `cartoonize` 是默认纯计算入口：
+
+~~~python
+bank = extract_feature_bank(image, mask, config.features)
+line_features = fuse_line_features(bank, mask, protect, suppress, config.strokes)
+region_features = fuse_region_features(bank, mask, config.regions)
+scene = organize_regions(region_features, mask, protect, config.regions)
+strokes = design_strokes(line_features, mask, config.strokes)
+fills = design_fills(bank, scene, mask, protect, config.regions)
+rendered = render_cartoon(strokes, fills, mask, config.render)
+~~~
+
+`feature_bank.py` 提取三尺度 DW、非线性 PW 结构融合、DoG 与邻域方向；`regions.py` 完成邻接权重、确定性颜色原型、连通区合并及区域内明暗；`strokes.py` 完成骨架图追踪、有限偏移的折线平滑和笔画属性；`rendering.py` 重绘区域与笔画，并在线性 RGB 中合成。`comic_artifacts.py` 集中导出文件。
+
+区域采用当前照片上的颜色聚类与邻接规则，未使用训练好的部件解析；曲线目前是受约束的平滑折线，不是完整的手绘笔刷或自由样条。暗线仍可能断裂，脸部也可能被光照分成多个色块。Hessian、可学习融合、自动五官语义与流场线描保持为后续扩展。
+
+下列是兼容的 v0.6 管道：
+
 [workflow.py](src/cartoon_portrait/workflow.py) 中的 `stylize` 是无文件副作用的计算入口，其内部保持：
 
 ~~~python
@@ -133,7 +203,7 @@ rgba = compose_rgba(colors, lines, mask.astype("float32"), config.strength)
 
 高斯的横纵分解属于空间可分离，RGB 独立处理属于 DW，非线性结构特征的通道汇总对应 PW。WLS、连通筛选、颜色变换与 RGBA 合成各有自己的数学作用，整个系统不是一个训练好的 CNN。
 
-默认假定输入为 sRGB，不执行 ICC 色彩管理。大图仍保持原分辨率，耗时和内存随像素数增加；当前 alpha 为二值，精细发丝与半透明边缘尚未处理。
+默认假定输入为 sRGB，不执行 ICC 色彩管理。特征分析保持原分辨率，耗时和内存随像素数增加。v0.6 的 alpha 为二值；comic 的覆盖率抗锯齿使用独立渲染路径，均未实现精细发丝分割。
 
 ## 验证与记录
 
@@ -148,4 +218,5 @@ python -m ty check
 
 - [研究方案与设计](研究方案与设计.md)：任务定义、第一版与方法背景。
 - [下一版设计](下一版设计.md)：本次实现采用的结构、公式和接口约定。
+- [漫画表达设计](漫画表达设计.md)：v0.7 的特征、任务融合与绘制设计，并记录已实现范围和后续扩展。
 - [实施记录](实施记录.md)：运行证据、效果观察与限制。

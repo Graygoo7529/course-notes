@@ -202,7 +202,7 @@ class FilePipelineTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary, contextlib.redirect_stdout(io.StringIO()):
             root = Path(temporary)
             first, second, third = root / "first", root / "second", root / "third"
-            self.assertEqual(main(["--demo", "--output", str(first)]), 0)
+            self.assertEqual(main(["--pipeline", "structure", "--demo", "--output", str(first)]), 0)
             for name in (
                 "input.png", "mask.png", "base.png", "colors.png", "lines.png",
                 "cartoon.png", "preview_light.png", "preview_dark.png",
@@ -213,7 +213,7 @@ class FilePipelineTests(unittest.TestCase):
             self.assertGreater(details["synthetic_mask_iou"], 0.99)
             # 复用已导出的规范化原图与遮罩，跳过耗时分割，仍应得到同一结果。
             with patch("cartoon_portrait.cli.segment_person", side_effect=AssertionError("不应重跑分割")):
-                self.assertEqual(main([
+                self.assertEqual(main(["--pipeline", "structure",
                     "--input", str(first / "input.png"), "--mask", str(first / "mask.png"),
                     "--output", str(second),
                 ]), 0)
@@ -227,13 +227,13 @@ class FilePipelineTests(unittest.TestCase):
                 prior = np.asarray(opened).astype(np.int16)
             self.assertLessEqual(float(np.abs(prior - rgba.astype(np.int16)).mean()), 0.5)
             # 四类标签 PNG 也能重新初始化分割。
-            self.assertEqual(main([
+            self.assertEqual(main(["--pipeline", "structure",
                 "--input", str(first / "input.png"), "--labels", str(first / "selection_labels.png"),
                 "--output", str(third),
             ]), 0)
             original = (first / "cartoon.png").read_bytes()
             with contextlib.redirect_stderr(io.StringIO()):
-                self.assertEqual(main(["--demo", "--output", str(first)]), 2)
+                self.assertEqual(main(["--pipeline", "structure", "--demo", "--output", str(first)]), 2)
             self.assertEqual((first / "cartoon.png").read_bytes(), original)
 
     def test_soft_mask_is_not_silently_accepted_as_binary(self) -> None:

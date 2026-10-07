@@ -5,6 +5,11 @@ from .features import FeatureConfig, FusionConfig, extract_channel_features, fus
 from .lines import LineConfig, make_lines
 from .selection import ViewConfig, collect_selection, make_preview, view_to_image
 from .workflow import StyleConfig, StyleResult, stylize
+from .comic import ComicConfig, ComicResult, cartoonize
+from .feature_bank import BankConfig, extract_feature_bank
+from .regions import RegionConfig, design_fills, organize_regions
+from .rendering import RenderConfig, render_cartoon
+from .strokes import StrokeConfig, design_strokes
 
 from .pipeline import (
     Config,
@@ -26,4 +31,6 @@ __all__ = [
     "ViewConfig", "collect_selection", "make_preview", "view_to_image",
     "extract_channel_features", "fuse_features", "make_colors", "make_lines",
     "edge_aware_smooth", "map_lightness", "stylize",
+    "ComicConfig", "ComicResult", "BankConfig", "RegionConfig", "StrokeConfig", "RenderConfig",
+    "cartoonize", "extract_feature_bank", "organize_regions", "design_strokes", "design_fills", "render_cartoon",
 ]

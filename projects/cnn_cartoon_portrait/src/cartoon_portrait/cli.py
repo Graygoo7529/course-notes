@@ -21,6 +21,12 @@ from .pipeline import (
 )
 from .selection import ViewConfig, collect_selection
 from .workflow import StyleConfig, stylize
+from .comic import ComicConfig, cartoonize
+from .comic_artifacts import export_comic
+from .feature_bank import BankConfig
+from .regions import RegionConfig
+from .rendering import RenderConfig
+from .strokes import StrokeConfig
 
 PROJECT = Path(__file__).resolve().parents[2]
 
@@ -28,7 +34,7 @@ PROJECT = Path(__file__).resolve().parents[2]
 def parser() -> argparse.ArgumentParser:
     defaults = StyleConfig()
     result = argparse.ArgumentParser(
-        description="自拍漫画化：逐通道方向卷积 → 结构融合 → 保边色块与线条。",
+        description="自拍漫画化：多尺度卷积 → 线条／区域／明暗 → 配色与笔画重绘。",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     source = result.add_mutually_exclusive_group(required=True)
@@ -41,7 +47,7 @@ def parser() -> argparse.ArgumentParser:
     selection.add_argument("--mask", type=Path, help="复用已确认的二值遮罩（0/255 PNG），跳过 GrabCut。")
     result.add_argument("--output", type=Path, help="新建的结果目录；默认放入项目 outputs 下。")
     result.add_argument("--iterations", type=int, default=5, help="GrabCut 迭代次数。")
-    result.add_argument("--pipeline", choices=("structure", "baseline"), default="structure", help="结构融合路线；baseline 为第一版对照。")
+    result.add_argument("--pipeline", choices=("comic", "structure", "baseline"), default="comic", help="comic 为多尺度重绘；structure 保留 v0.6，baseline 保留第一版。")
     result.add_argument("--sigma", type=float, help="预平滑尺度，单位原图像素；结构路线默认 0.6，第一版 1.5；0 关闭。")
     result.add_argument("--levels", type=int, default=6, help="Lab 明度档数，至少 2。")
     result.add_argument("--amount", type=float, help="明度分层强度；结构路线默认 0.35，第一版 0.65。")
@@ -62,8 +68,49 @@ def parser() -> argparse.ArgumentParser:
     structure.add_argument("--tau-lightness", type=float, default=8.0, help="边界权重的 Lab L* 差异尺度。")
     structure.add_argument("--tau-chroma", type=float, default=12.0, help="边界权重的 Lab 色度差异尺度。")
     structure.add_argument("--tau-gradient", type=float, default=0.12, help="边界权重的归一化梯度尺度。")
+    comic = result.add_argument_group("漫画重绘参数（--pipeline comic，默认）")
+    comic.add_argument("--scales", type=float, nargs="+", default=[0.6, 1.2, 2.4], help="递增卷积尺度，单位原图像素；不能与 --sigma 同用。")
+    comic.add_argument("--palette-size", type=int, default=6, help="当前图像的颜色原型数量，2–24。")
+    comic.add_argument("--palette", nargs="+", help="指定十六进制配色，例如 '#dbaa8a' '#30282a'。")
+    comic.add_argument("--region-smoothness", type=float, default=6.0)
+    comic.add_argument("--line-width", type=float, default=.8, help="内部主线宽，原图像素。")
+    comic.add_argument("--contour-width", type=float, default=1.1, help="外轮廓线宽，0 关闭。")
+    comic.add_argument("--line-low", type=float, default=.2)
+    comic.add_argument("--line-high", type=float, default=.48)
+    comic.add_argument("--min-line-length", type=float, default=2.0, help="短路径筛选长度；保护标记可保留短线。")
+    comic.add_argument("--ink-color", default="#1f1a24", help="笔画墨色。--strength 控制透明度，comic 默认 0.92。")
+    comic.add_argument("--shadow-depth", type=float, default=9.0, help="阴影降低的 Lab 明度；0 关闭阴影。")
+    comic.add_argument("--shadow-fraction", type=float, default=.25, help="区域阴影候选分位数；平坦区域自动跳过。")
+    comic.add_argument("--shadow-style", choices=("warm", "cool", "neutral"), default="warm")
+    comic.add_argument("--render-scale", type=int, default=4, help="绘制倍率；分析仍在原图尺寸。")
+    comic.add_argument("--supersample", type=int, default=1, help="额外超采样倍率；绘制后下采样，不改变最终尺寸。")
+    comic.add_argument("--protect-lines", type=Path, help="同原图尺寸的 0/255 PNG，保护已有弱线和小区域。")
+    comic.add_argument("--suppress-lines", type=Path, help="同原图尺寸的 0/255 PNG，删除内部候选线；不改变外轮廓。")
     result.add_argument("--preview-scale", type=float, default=4.0, help="交互预览最大倍率；不改变计算尺寸。")
     return result
+
+
+def _hex_color(value: str) -> tuple[float, float, float]:
+    value = value.removeprefix("#")
+    if len(value) != 6:
+        raise ValueError("颜色需要六位十六进制 RGB，例如 '#30282a'。")
+    try:
+        channels = [int(value[i:i + 2], 16) / 255 for i in (0, 2, 4)]
+    except ValueError as error:
+        raise ValueError("颜色包含非十六进制字符。") from error
+    return channels[0], channels[1], channels[2]
+
+
+def _load_hint(path: Path | None, shape: tuple[int, ...]) -> np.ndarray:
+    if path is None:
+        return np.zeros(shape[:2], dtype=bool)
+    # 提示允许全零，与必须包含前景的人物 mask 不同。
+    from PIL import Image
+    with Image.open(path) as opened:
+        values = np.asarray(opened)
+    if values.ndim != 2 or values.shape != shape[:2] or not np.isin(values, [0, 255]).all():
+        raise ValueError("提示必须是与原图同尺寸的单通道 0/255 PNG。")
+    return values == 255
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -72,9 +119,31 @@ def main(argv: list[str] | None = None) -> int:
     if args.demo and (args.rect or args.labels or args.mask or args.interactive):
         arguments.error("--demo 自带矩形，不与其他分割输入同时使用。")
     try:
+        supplied = {value.split("=", 1)[0] for value in (argv if argv is not None else sys.argv[1:]) if value.startswith("--")}
+        legacy_only = {"--levels", "--amount", "--threshold", "--low-threshold", "--softness", "--high-threshold", "--ink-gamma", "--no-thin", "--outline-width", "--transition", "--detail", "--luma-smoothness", "--chroma-smoothness", "--tau-lightness", "--tau-chroma", "--tau-gradient"}
+        comic_only = {"--scales", "--palette-size", "--palette", "--region-smoothness", "--line-width", "--contour-width", "--line-low", "--line-high", "--min-line-length", "--ink-color", "--shadow-depth", "--shadow-fraction", "--shadow-style", "--render-scale", "--supersample", "--protect-lines", "--suppress-lines"}
+        incompatible = supplied & (legacy_only if args.pipeline == "comic" else comic_only)
+        if incompatible:
+            raise ValueError(f"当前 {args.pipeline} 路线不使用这些参数：{', '.join(sorted(incompatible))}；请检查 --pipeline。")
         defaults = StyleConfig()
-        if args.pipeline == "baseline":
-            cfg: Config | StyleConfig = Config(
+        cfg: Config | StyleConfig | ComicConfig
+        if args.pipeline == "comic":
+            if args.sigma is not None and "--scales" in supplied:
+                raise ValueError("--sigma 与 --scales 不可同时使用。")
+            scales = tuple(args.scales) if args.sigma is None else (args.sigma, 2 * args.sigma, 4 * args.sigma)
+            cfg = ComicConfig(
+                features=BankConfig(scales=scales, weights=tuple(args.channel_weights), operator=args.operator),
+                regions=RegionConfig(colors=args.palette_size, smoothness=args.region_smoothness,
+                                     palette=tuple(_hex_color(c) for c in (args.palette or [])),
+                                     shadow_depth=args.shadow_depth, shadow_fraction=args.shadow_fraction,
+                                     shadow_style=args.shadow_style),
+                strokes=StrokeConfig(width=args.line_width, outline_width=args.contour_width,
+                                     low=args.line_low, high=args.line_high, min_length=args.min_line_length,
+                                     ink=_hex_color(args.ink_color), opacity=.92 if args.strength is None else args.strength),
+                render=RenderConfig(scale=args.render_scale, supersample=args.supersample),
+            )
+        elif args.pipeline == "baseline":
+            cfg = Config(
                 sigma=1.5 if args.sigma is None else args.sigma,
                 levels=args.levels, amount=.65 if args.amount is None else args.amount,
                 threshold=.035 if args.threshold is None else args.threshold,
@@ -131,7 +200,7 @@ def main(argv: list[str] | None = None) -> int:
                 selection = Selection(labels=labels, iterations=args.iterations)
                 metadata["labels_source"] = str(args.labels.resolve())
 
-        print(f"输入尺寸：{image.shape[1]} × {image.shape[0]}；保持原始处理尺寸。", flush=True)
+        print(f"输入尺寸：{image.shape[1]} × {image.shape[0]}；特征分析保持原始尺寸。", flush=True)
         if selection is not None:
             print("正在计算 GrabCut 人物遮罩……", flush=True)
             mask = segment_person(image, selection)
@@ -156,7 +225,20 @@ def main(argv: list[str] | None = None) -> int:
 
         started = perf_counter()
         result = None
-        if isinstance(cfg, StyleConfig):
+        if isinstance(cfg, ComicConfig):
+            protect = _load_hint(args.protect_lines, image.shape)
+            suppress = _load_hint(args.suppress_lines, image.shape)
+            if args.protect_lines:
+                metadata["protect_source"] = str(args.protect_lines.resolve())
+            if args.suppress_lines:
+                metadata["suppress_source"] = str(args.suppress_lines.resolve())
+            print("正在提取多尺度特征、整理区域与笔画，并在目标画布重绘……", flush=True)
+            comic_result = cartoonize(image, mask, cfg, protect=protect, suppress=suppress)
+            metadata["processing_seconds"] = perf_counter() - started
+            output = export_comic(directory, image, mask, comic_result, cfg, metadata, labels)
+            print(f"已整理 {len(comic_result.fills.palette)-1} 个区域、{len(comic_result.strokes.strokes)} 条路径。")
+            print(f"绘制尺寸：{comic_result.rendered.rgba.shape[1]} × {comic_result.rendered.rgba.shape[0]}。")
+        elif isinstance(cfg, StyleConfig):
             print("正在计算逐通道结构、保边色块和筛选线条……", flush=True)
             result = stylize(image, mask, cfg)
             base, colors, lines, rgba = result.features.guide, result.colors, result.lines, result.rgba
@@ -167,15 +249,18 @@ def main(argv: list[str] | None = None) -> int:
             colors = quantize_colors(base, levels=cfg.levels, amount=cfg.amount)
             lines = extract_lines(base, mask, threshold=cfg.threshold, softness=cfg.softness)
             rgba = compose_rgba(colors, lines, mask.astype(np.float32), strength=cfg.strength)
-        metadata["processing_seconds"] = perf_counter() - started
-        output = export_results(
-            directory, image, mask, base, colors, lines, rgba, cfg, metadata, labels, result=result,
-        )
+        if not isinstance(cfg, ComicConfig):
+            metadata["processing_seconds"] = perf_counter() - started
+            output = export_results(
+                directory, image, mask, base, colors, lines, rgba, cfg, metadata, labels, result=result,
+            )
         if demo_truth is not None:
             print(f"合成图分割 IoU：{metadata['synthetic_mask_iou']:.4f}（不代表真实自拍效果）。")
         print(f"已导出透明漫画：{output}")
         print(f"步骤总览：{directory / 'overview.png'}")
         print(f"参数记录：{directory / 'parameters.json'}")
+        if isinstance(cfg, ComicConfig):
+            print(f"过程浏览：{directory / 'report.html'}")
         return 0
     except (ValueError, OSError, ArithmeticError, cv2.error) as error:
         print(f"处理未完成：{error}", file=sys.stderr)

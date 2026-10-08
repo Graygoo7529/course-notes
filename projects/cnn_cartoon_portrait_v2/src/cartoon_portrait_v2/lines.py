@@ -240,7 +240,8 @@ def _make_strokes(skeleton: np.ndarray, source: np.ndarray, score: np.ndarray,
         length = float(np.linalg.norm(np.diff(xy.astype(np.float32), axis=0), axis=1).sum())
         values = source[points[:, 1], points[:, 0]]
         # 1=outline, 2=internal edge, 3=dark accent.
-        source_id = int(np.bincount(values, minlength=4)[1:].argmax() + 1)
+        counts = np.bincount(values, minlength=4).tolist()
+        source_id = max((1, 2, 3), key=lambda label: counts[label])
         if length < config.min_length and source_id != 1:
             continue
         name = ("outline", "edge", "dark")[source_id - 1]
@@ -286,7 +287,7 @@ def generate_lines(features, mask: np.ndarray, config: LineConfig | None = None)
         cv2.erode(mask.astype(np.uint8), np.ones((3, 3), np.uint8),
                   borderType=cv2.BORDER_CONSTANT, borderValue=1) > 0)).astype(np.float32)
     outline_score = outline * cfg.outline_strength
-    score = np.maximum.reduce((outline_score, nms_edge, nms_dark)).astype(np.float32)
+    score = np.maximum(np.maximum(outline_score, nms_edge), nms_dark).astype(np.float32)
     source = np.argmax(np.stack((outline_score, nms_edge, nms_dark), axis=-1), axis=-1).astype(np.uint8)
     # Source ids are 1=outline, 2=edge, 3=dark.
     source = np.where(score > 0, source + 1, 0).astype(np.uint8)

@@ -62,8 +62,9 @@ def cartoonize(image: np.ndarray, mask: np.ndarray, config: V2Config | None = No
         "features": feature_images,
         "lines": {
             "edge_fused": lines.edge, "dark_candidate": lines.dark, "nms_edge": lines.nms_edge,
-            "nms_dark": lines.nms_dark, "score": lines.score, "retained": lines.retained,
-            "skeleton": lines.skeleton, "bridged": lines.bridged,
+            "outline": lines.outline, "internal_candidate": lines.internal,
+            "nms_dark": lines.nms_dark, "score": lines.score, "source": lines.source,
+            "retained": lines.retained, "skeleton": lines.skeleton, "bridged": lines.bridged,
         },
         "regions": {
             "lab_lightness": features.lightness, "chroma_edge": features.chroma_edge,

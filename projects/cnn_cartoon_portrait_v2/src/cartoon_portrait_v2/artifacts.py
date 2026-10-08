@@ -14,30 +14,51 @@ from .pipeline import ensure_dir, robust01, save_gray, save_rgb
 
 
 def _write(path: Path, value: np.ndarray, mask: np.ndarray | None = None) -> str:
+    # The compose stage lives on the enlarged canvas, so bring the original
+    # foreground mask to the feature map's spatial size before hiding the
+    # background.  Without this step a high-resolution RGB map is written with
+    # its zero-valued outside area as black.
+    valid_mask = mask
+    if mask is not None and mask.shape != value.shape[:2]:
+        valid_mask = cv2.resize(mask.astype(np.uint8),
+                                (value.shape[1], value.shape[0]),
+                                interpolation=cv2.INTER_NEAREST).astype(bool)
     if value.ndim == 3 and value.shape[-1] == 3:
         image = value.copy()
-        if mask is not None and mask.shape == value.shape[:2]:
-            image[~mask] = 1
+        if path.stem == "compose__strokes":
+            # The renderer stores transparent pixels as zero.  For the
+            # observer, show that layer as ink on paper instead of a black
+            # canvas so the individual stroke paths remain readable.
+            ink = np.any(image > 1e-4, axis=-1)
+            paper = np.ones_like(image)
+            paper[ink] = image[ink]
+            image = paper
+        if valid_mask is not None:
+            image[~valid_mask] = 1
         save_rgb(path, image)
     elif value.dtype == bool:
-        display = (value.astype(np.float32) > 0).astype(np.uint8) * 255
-        if mask is not None and mask.shape == value.shape:
-            display[~mask] = 255
+        display = np.where(value, 0, 255).astype(np.uint8)
+        if valid_mask is not None and valid_mask.shape == value.shape:
+            display[~valid_mask] = 255
         cv2.imwrite(str(path), display)
     elif np.issubdtype(value.dtype, np.integer):
         # Labels are categorical: a grayscale normalization would make label 0
         # indistinguishable from the outside mask, so use a stable false colour map.
         labels = value.astype(np.int32)
         out = np.full((*labels.shape, 3), 255, np.uint8)
-        palette = np.array([[232, 92, 80], [84, 156, 230], [104, 190, 120],
-                            [224, 179, 74], [166, 118, 206], [92, 188, 188]], np.uint8)
+        if path.stem.endswith("source"):
+            palette = np.array([[255, 255, 255], [230, 70, 70], [65, 120, 230],
+                                [60, 180, 110], [224, 179, 74], [166, 118, 206]], np.uint8)
+        else:
+            palette = np.array([[232, 92, 80], [84, 156, 230], [104, 190, 120],
+                                [224, 179, 74], [166, 118, 206], [92, 188, 188]], np.uint8)
         for i in range(len(palette)):
             out[labels == i] = palette[i]
         cv2.imwrite(str(path), cv2.cvtColor(out, cv2.COLOR_RGB2BGR))
     elif "dog_signed" in path.stem:
         # Signed DoG: mid-gray is zero, bright/dark show opposite responses.
         values = value.astype(np.float32)
-        valid = mask if mask is not None else np.ones(values.shape, bool)
+        valid = valid_mask if valid_mask is not None else np.ones(values.shape, bool)
         sample = np.abs(values[valid]) if np.any(valid) else np.array([1], np.float32)
         scale = max(.01, float(np.quantile(sample, .98)))
         display = .5 + .5 * np.clip(values / scale, -1, 1)
@@ -45,7 +66,7 @@ def _write(path: Path, value: np.ndarray, mask: np.ndarray | None = None) -> str
         cv2.imwrite(str(path), np.rint(display * 255).astype(np.uint8))
     elif "theta" in path.stem:
         # Orientation is periodic modulo pi; hue is more readable than a linear gray map.
-        valid = mask if mask is not None else np.ones(value.shape, bool)
+        valid = valid_mask if valid_mask is not None else np.ones(value.shape, bool)
         hue = np.mod(value.astype(np.float32), np.pi) / np.pi * 179
         hsv = np.zeros((*value.shape, 3), np.uint8)
         hsv[..., 0] = np.rint(hue).astype(np.uint8)
@@ -54,12 +75,14 @@ def _write(path: Path, value: np.ndarray, mask: np.ndarray | None = None) -> str
         rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
         cv2.imwrite(str(path), cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
     else:
-        display = robust01(value, mask)
-        valid = mask if mask is not None and mask.shape == value.shape else np.ones(value.shape, bool)
+        display = robust01(value, valid_mask)
+        valid = valid_mask if valid_mask is not None and valid_mask.shape == value.shape else np.ones(value.shape, bool)
         # Match v1's response display: stronger response is darker and the
         # invalid background is white. Signed maps and directions are handled
         # by their branches above.
-        if any(token in path.stem for token in ("edge", "response", "score", "dark_candidate", "nms")):
+        if any(token in path.stem for token in (
+                "edge", "response", "score", "dark_candidate", "internal_candidate",
+                "outline", "nms")):
             display = 1 - display
         display[~valid] = 1
         cv2.imwrite(str(path), np.rint(display * 255).astype(np.uint8))
@@ -80,7 +103,12 @@ def save_run(result: CartoonResult, output: str | Path, config: V2Config, input_
             shapes[f"{stage}.{name}"] = list(np.asarray(value).shape)
     save_rgb(root / "input.png", result.features.image)
     cv2.imwrite(str(root / "mask.png"), result.features.mask.astype(np.uint8) * 255)
-    save_rgb(root / "cartoon.png", result.rendered.rgb)
+    cartoon = result.rendered.rgb.copy()
+    render_mask = cv2.resize(result.features.mask.astype(np.uint8),
+                             (cartoon.shape[1], cartoon.shape[0]),
+                             interpolation=cv2.INTER_NEAREST).astype(bool)
+    cartoon[~render_mask] = 1
+    save_rgb(root / "cartoon.png", cartoon)
     np.savez_compressed(
         root / "features.npz", scales=np.asarray(result.features.scales),
         guides=result.features.guides, gx=result.features.gx, gy=result.features.gy,
@@ -109,14 +137,15 @@ def save_run(result: CartoonResult, output: str | Path, config: V2Config, input_
              {"title": "有符号 DoG", "description": "宽尺度亮度减窄尺度亮度；灰色为零，保留变暗与变亮的方向。", "outputs": feature_scale_dogs + ["dark_candidate"]},
              {"title": "Lab 色差特征", "description": "从 Lab 的 L、a、b 计算亮度、色度梯度和邻域颜色屏障。", "outputs": ["lightness", "chroma_edge", "color_barrier"]},
          ]},
-        {"id": "lines", "title": "线条生成", "purpose": "沿方向响应细化线条，并以滞后阈值保留连续笔画。",
+        {"id": "lines", "title": "线条生成", "purpose": "把结构、暗部和人物轮廓分成三类笔画，再分别筛选和重绘。",
          "inputs": [{"stage": "features", "name": n} for n in ["edge_fused", "theta_fused", "coherence_fused", "dark_candidate"]],
-         "outputs": [{"stage": "lines", "name": n} for n in ["score", "retained", "skeleton", "bridged"]],
+         "outputs": [{"stage": "lines", "name": n} for n in ["outline", "internal_candidate", "score", "source", "retained", "skeleton", "bridged"]],
          "ops": [
-             {"title": "方向非极大值抑制", "description": "沿特征提取产生的 theta 法线比较两侧响应，保留局部峰值。", "outputs": ["nms_edge", "nms_dark"]},
-             {"title": "结构与暗部软融合", "description": "融合几何边缘和 DoG 暗部，避免单独依赖某一种响应。", "outputs": ["score"]},
-             {"title": "滞后阈值连通", "description": "强线作为种子吸收相邻弱线，减少断裂并避免全局闭运算粘连。", "outputs": ["retained"]},
-             {"title": "骨架化与方向一致短桥", "description": "把线条区域细化为中心线，只连接短距离且切线一致的端点。", "outputs": ["skeleton", "bridged"]},
+             {"title": "三类候选构造", "description": "细尺度结构形成内部线，遮罩边界形成外轮廓，DoG 暗部形成强调线。", "outputs": ["outline", "internal_candidate", "dark_candidate"]},
+             {"title": "方向非极大值抑制", "description": "沿特征提取产生的 theta 法线比较两侧响应，减少双边轮廓。", "outputs": ["nms_edge", "nms_dark"]},
+             {"title": "来源标记与软融合", "description": "保留 outline、edge、dark 来源，避免把宽阔阴影直接当成统一黑线。", "outputs": ["score", "source"]},
+             {"title": "滞后阈值连通", "description": "强线作为种子吸收相邻弱线，保持镜框、眼睑和嘴唇的连续性。", "outputs": ["retained"]},
+             {"title": "骨架路径与笔锋", "description": "拓扑细化、图路径追踪、有限曲线平滑，并按来源分配线宽和端点渐细。", "outputs": ["skeleton", "bridged"]},
          ]},
         {"id": "regions", "title": "区域生成", "purpose": "依据亮度、色度边缘和邻域屏障形成连续的大色块。",
          "inputs": [{"stage": "features", "name": n} for n in ["lightness", "chroma_edge", "color_barrier"]],
@@ -176,9 +205,12 @@ def _image_info(result: CartoonResult) -> dict[str, dict[str, dict[str, str]]]:
         "lines": {
             "edge_fused": {"title": "线条结构输入", "meaning": "进入线条分支的融合结构强度。", "purpose": "提供几何轮廓。"},
             "dark_candidate": {"title": "线条暗部输入", "meaning": "进入线条分支的暗部响应。", "purpose": "补足嘴缝、眼睑等暗线。"},
+            "outline": {"title": "外轮廓候选", "meaning": "人物遮罩与其腐蚀结果的边界。", "purpose": "形成较重且连续的人物外形线。"},
+            "internal_candidate": {"title": "内部结构候选", "meaning": "细尺度结构并经过方向可靠性加权。", "purpose": "提取镜框、眼睑、鼻梁和嘴唇。"},
             "nms_edge": {"title": "方向细化结构", "meaning": "沿 theta 法线只保留局部峰值。", "purpose": "让线条变细并减少双边响应。"},
             "nms_dark": {"title": "方向细化暗线", "meaning": "对暗部候选进行同样的方向筛选。", "purpose": "保留局部暗结构中心。"},
             "score": {"title": "线条综合分数", "meaning": "结构线与暗线的软融合。", "purpose": "为滞后阈值提供统一评分。"},
+            "source": {"title": "线条来源", "meaning": "红色外轮廓、蓝色内部结构、绿色暗部强调。", "purpose": "检查每一笔是由哪类特征产生。"},
             "retained": {"title": "滞后阈值结果", "meaning": "强响应连接相邻弱响应后的线条区域。", "purpose": "保持连续笔画。"},
             "skeleton": {"title": "骨架线", "meaning": "线条区域的细化结果。", "purpose": "为路径重绘提供中心线。"},
             "bridged": {"title": "断线修整", "meaning": "只连接短距离且切线方向一致的端点。", "purpose": "修复眼镜框、嘴唇等小断裂而不粘连无关结构。"},

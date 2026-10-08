@@ -41,9 +41,12 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--palette-size", type=int, default=5)
     p.add_argument("--palette-style", choices=["natural", "warm", "pastel", "noir"], default="natural")
     p.add_argument("--line-width", type=float, default=1.35)
+    p.add_argument("--dark-width", type=float, default=1.02)
+    p.add_argument("--outline-width", type=float, default=1.30)
+    p.add_argument("--min-coherence", type=float, default=.16)
     p.add_argument("--line-low", type=float, default=.16)
     p.add_argument("--line-high", type=float, default=.34)
-    p.add_argument("--join-gap", type=int, default=2)
+    p.add_argument("--join-gap", type=int, default=3)
     p.add_argument("--shadow-depth", type=float, default=.18)
     p.add_argument("--shadow-fraction", type=float, default=.28)
     p.add_argument("--view", nargs="?", const=True, default=False, type=bool_value)
@@ -64,7 +67,9 @@ def main(argv: list[str] | None = None) -> int:
                                 dog_ratio=max(1.01, args.dark_sigma / args.sigma))
     config = V2Config(
         feature=feature,
-        line=LineConfig(args.line_low, args.line_high, args.join_gap),
+        line=LineConfig(low=args.line_low, high=args.line_high, join_gap=args.join_gap,
+                        width=args.line_width, dark_width=args.dark_width,
+                        outline_width=args.outline_width, min_coherence=args.min_coherence),
         region=RegionConfig(palette_size=args.palette_size, palette_style=args.palette_style),
         tone=ToneConfig(args.shadow_fraction, args.shadow_depth),
         render=RenderConfig(args.render_scale, args.line_width),

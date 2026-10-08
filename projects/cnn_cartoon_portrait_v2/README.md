@@ -18,6 +18,20 @@ v2 是一次干净的、可解释的函数式实现。旧的 `cnn_cartoon_portra
 python run.py --input photo.jpg --mask mask.png --output outputs/v2-selfie --view=true
 ```
 
+需要传输或在另一台电脑上查看时，加上 `--export=true`：
+
+```powershell
+python run.py --input photo.jpg --mask mask.png --output outputs/v2-selfie --export=true
+```
+
+命令会生成 `outputs/v2-selfie/observer_bundle.zip`。压缩包内含 `index.html`、全部中间特征图、最终漫画、参数、清单和特征数据；解压后直接打开 `index.html` 即可，图片使用相对路径，不依赖原电脑的绝对路径。已有结果也可以重新打包：
+
+```powershell
+python inspect_run.py --run outputs/v2-selfie --export=true --view=true
+```
+
+观察室本身不需要再打开原始照片的本地绝对路径：页面显示的是压缩包内的 `input.png`、`mask.png` 和 `images/` 下的副本。若浏览器对 `file://` 页面中的脚本有限制，可以用上面的 `--view=true` 通过本地 HTTP 服务打开，显示内容相同。
+
 也可先生成，再单独打开观察室：
 
 ```powershell

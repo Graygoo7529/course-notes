@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import tempfile
+import zipfile
 from dataclasses import asdict
 from pathlib import Path
 
@@ -173,13 +175,66 @@ def save_run(result: CartoonResult, output: str | Path, config: V2Config, input_
          ]},
     ]
     image_info = _image_info(result)
-    manifest = {"version": "v2", "input": input_path, "mask": mask_path, "images": images,
+    # Keep the manifest portable: the observer uses the copied relative files;
+    # original absolute paths remain only as optional provenance metadata.
+    manifest = {"version": "v2", "input": "input.png", "mask": "mask.png",
+                "source": {"input": input_path, "mask": mask_path}, "images": images,
                 "image_info": image_info,
+                "bundle": {"filename": "observer_bundle.zip", "href": "observer_bundle.zip",
+                           "available": False},
                 "shapes": shapes, "architecture": {"nodes": nodes,
                 "edges": [["features", "lines"], ["features", "regions"], ["regions", "tone"], ["lines", "compose"], ["tone", "compose"]]}}
     (root / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     write_observer(root, manifest)
     return root
+
+
+def export_run_bundle(root: str | Path) -> Path:
+    """Export the current manifest's assets, with no original-machine dependency."""
+    root = Path(root).resolve()
+    if not (root / "index.html").exists():
+        raise FileNotFoundError(f"找不到观察室：{root / 'index.html'}")
+    target = root / "observer_bundle.zip"
+    manifest_path = root / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    # Select the current run's assets explicitly: old ZIPs and diagnostic
+    # experiments in the same directory must not accumulate in later exports.
+    names = {name for mapping in manifest["images"].values() for name in mapping.values()}
+    names.update(("input.png", "mask.png", "cartoon.png"))
+    names.update(name for name in ("parameters.json", "features.npz") if (root / name).is_file())
+    assets: list[tuple[Path, str]] = []
+    for name in sorted(names):
+        path = (root / name).resolve()
+        if not path.is_relative_to(root):
+            raise ValueError(f"图片引用必须位于结果目录内：{name}")
+        if not path.is_file():
+            raise FileNotFoundError(f"导出缺少文件：{name}")
+        assets.append((path, path.relative_to(root).as_posix()))
+
+    # The transferred page has no link to an archive it does not contain.
+    # Normalize legacy manifests too, without needing to rerun the algorithm.
+    portable = dict(manifest)
+    portable.pop("source", None)
+    portable.update(input="input.png", mask="mask.png", bundle={"available": False})
+    with tempfile.NamedTemporaryFile(dir=root, suffix=".zip.tmp", delete=False) as temporary:
+        temporary_path = Path(temporary.name)
+    try:
+        with zipfile.ZipFile(temporary_path, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
+            for path, name in assets:
+                bundle.write(path, name)
+            bundle.writestr("index.html", _html(portable))
+            bundle.writestr("manifest.json", json.dumps(portable, ensure_ascii=False, indent=2))
+            bundle.writestr("打开说明.txt", "请先解压整个压缩包，再用浏览器打开 index.html。\n"
+                            "请保留 images 文件夹；无需安装 Python、启动服务器或连接网络。\n")
+        temporary_path.replace(target)
+    finally:
+        temporary_path.unlink(missing_ok=True)
+
+    manifest["bundle"] = {"filename": target.name, "href": target.name, "available": True}
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_observer(root, manifest)
+    return target
 
 
 def _image_info(result: CartoonResult) -> dict[str, dict[str, dict[str, str]]]:
@@ -269,6 +324,7 @@ main{max-width:1180px;margin:22px auto;padding:0 18px}
 .node.active{border-color:#5074d9;box-shadow:0 0 0 3px #5074d933}
 .arrow{color:#7a86a2;font-size:24px}
 .panel{background:white;border-radius:16px;padding:18px;margin-top:14px;box-shadow:0 3px 14px #15223b10}
+.toolbar{display:flex;align-items:center;gap:12px;margin:14px 0}.download{display:inline-block;background:#2e7664;color:white;text-decoration:none;border-radius:8px;padding:8px 13px}.download:hover{background:#245d50}
 .panel h2{margin:0 0 6px}.muted{color:#68728a}
 .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
 .card{border:1px solid #e1e5ee;border-radius:10px;padding:8px;background:#fbfcff}
@@ -277,7 +333,7 @@ main{max-width:1180px;margin:22px auto;padding:0 18px}
 .op{border-top:1px solid #e1e5ee;padding:10px 0 4px}.op h3{margin:5px 0}.channel-tabs{display:flex;gap:6px;margin:8px 0}.channel-tabs button{border:1px solid #bac7e0;background:#fff;border-radius:7px;padding:5px 13px;cursor:pointer}.channel-tabs button:hover{background:#edf1fa}.hidden{display:none}
 </style>"""
     body = """<header><h1>漫画人像 v2 · 观察室</h1><div>五段函数管道：特征 → 线条 / 区域 → 明暗 → 合成。点击节点查看图像证据。</div></header>
-<main><div class='route'>特征提取 ├─→ 线条生成 ─────────┐<br>　　　　└─→ 区域生成 ─→ 明暗生成 ─┴─→ 图片合成</div><div id='flow' class='flow'></div><div id='detail' class='panel'></div></main>"""
+<main><div class='route'>特征提取 ├─→ 线条生成 ─────────┐<br>　　　　└─→ 区域生成 ─→ 明暗生成 ─┴─→ 图片合成</div><div class='toolbar'><a id='bundle' class='download' download>下载自包含观察室 ZIP</a><span class='muted'>解压后可直接打开 index.html；图像均使用相对路径。</span></div><div id='flow' class='flow'></div><div id='detail' class='panel'></div></main>"""
     script = """<script>const M=""" + data + """;const order=M.architecture.nodes;const flow=document.querySelector('#flow'),detail=document.querySelector('#detail');
 function img(stage,name,extra=''){let p=M.images[stage]&&M.images[stage][name];let i=(M.image_info[stage]||{})[name]||{};return p?`<div class='card ${extra}' data-name='${name}'><a href='${p}' target='_blank'><img loading='lazy' src='${p}'></a><b>${i.title||name}</b><div class='muted'>${i.meaning||''}</div><div class='links'>${i.purpose||''}<br>尺寸：${(M.shapes[stage+'.'+name]||[]).join(' × ')}</div></div>`:''}
 function gallery(refs){return `<div class='gallery'>${(refs||[]).map(r=>img(r.stage,r.name)).join('')}</div>`}
@@ -285,5 +341,5 @@ function channelGallery(stage,names,id){return `<div class='channel-tabs'>${name
 function pickChannel(id,name){document.querySelectorAll('#'+id+' .card').forEach(x=>x.classList.toggle('hidden',x.dataset.name!==name))}
 function opGallery(stage,op,index){let channels=op.outputs.filter(x=>/^response_[RGB]_/.test(x));let rest=op.outputs.filter(x=>!channels.includes(x));return gallery(rest.map(name=>({stage,name})))+(channels.length===3?channelGallery(stage,channels,'channel_'+index):'')}
 function show(id){const n=order.find(x=>x.id===id)||order[0];document.querySelectorAll('.node').forEach(x=>x.classList.toggle('active',x.dataset.id===id));let ops=(n.ops||[]).map((op,i)=>`<div class='op'><h3>${i+1}. ${op.title}</h3><div class='muted'>${op.description}</div>${opGallery(id,op,i)}</div>`).join('');detail.innerHTML=`<h2>${n.title}</h2><div class='muted'>${n.purpose}</div><h3>输入图</h3>${gallery(n.inputs)}<h3>输出图</h3>${gallery(n.outputs)}<h3>内部算子与输出</h3>${ops}`}
-order.forEach((n,i)=>{let el=document.createElement('div');el.className='node';el.dataset.id=n.id;el.innerHTML=`<b>${n.title}</b><div class='muted'>${n.purpose}</div>`;el.onclick=()=>show(n.id);flow.appendChild(el);if(i<order.length-1){let a=document.createElement('span');a.className='arrow';a.textContent='→';flow.appendChild(a)}});show('features');</script>"""
+order.forEach((n,i)=>{let el=document.createElement('div');el.className='node';el.dataset.id=n.id;el.innerHTML=`<b>${n.title}</b><div class='muted'>${n.purpose}</div>`;el.onclick=()=>show(n.id);flow.appendChild(el);if(i<order.length-1){let a=document.createElement('span');a.className='arrow';a.textContent='→';flow.appendChild(a)}});show('features');const bundle=document.querySelector('#bundle');if(!M.bundle||!M.bundle.available){bundle.remove()}else{bundle.href=M.bundle.href||M.bundle.filename}</script>"""
     return "<!doctype html><html lang='zh-CN'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width'><title>CNN Cartoon v2 观察室</title>" + css + "</head><body>" + body + script + "</body></html>"

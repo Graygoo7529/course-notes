@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 import numpy as np
 
-from cartoon_portrait_v2.artifacts import save_run
+from cartoon_portrait_v2.artifacts import export_run_bundle, save_run
 from cartoon_portrait_v2.cli import bool_value, serve_observer
 from cartoon_portrait_v2.comic import V2Config, cartoonize
 from cartoon_portrait_v2.features import FeatureConfig
@@ -50,6 +50,8 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--shadow-depth", type=float, default=.18)
     p.add_argument("--shadow-fraction", type=float, default=.28)
     p.add_argument("--view", nargs="?", const=True, default=False, type=bool_value)
+    p.add_argument("--export", nargs="?", const=True, default=False, type=bool_value,
+                   help="生成可传输的 observer_bundle.zip")
     p.add_argument("--port", type=int, default=0)
     return p
 
@@ -78,6 +80,9 @@ def main(argv: list[str] | None = None) -> int:
     root = save_run(result, args.output, config, str(Path(args.input).resolve()), str(Path(args.mask).resolve()))
     print(f"已保存 v2 结果：{root / 'cartoon.png'}")
     print(f"五段观察室：{root / 'index.html'}")
+    if args.export:
+        archive = export_run_bundle(root)
+        print(f"观察室压缩包：{archive}")
     if args.view:
         serve_observer(root, args.port)
     return 0

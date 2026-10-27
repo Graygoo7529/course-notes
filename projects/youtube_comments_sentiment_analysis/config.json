@@ -1,0 +1,26 @@
+{
+  "seed": 42,
+  "proxy": "http://127.0.0.1:7897",
+  "verify_ssl": false,
+  "torch_threads": 6,
+  "batch_size": 8,
+  "max_length": 512,
+  "aspect_max_length": 256,
+  "sample_size": 200,
+  "mention_threshold": 0.6,
+  "language_min_probability": 0.8,
+  "models": {
+    "sentiment": "cardiffnlp/twitter-roberta-base-sentiment-latest",
+    "embedding": "sentence-transformers/all-MiniLM-L6-v2",
+    "mention": "facebook/bart-large-mnli",
+    "absa": "yangheng/deberta-v3-base-absa-v1.1"
+  },
+  "aspects": [
+    {"id": "cn_price", "name": "中国电动车 · 价格", "target": "Chinese electric vehicles", "aspect": "price of Chinese electric vehicles", "hypothesis": "This sentence discusses the price or affordability of Chinese electric vehicles."},
+    {"id": "cn_quality", "name": "中国电动车 · 质量", "target": "Chinese electric vehicles", "aspect": "quality of Chinese electric vehicles", "hypothesis": "This sentence discusses the quality or reliability of Chinese electric vehicles."},
+    {"id": "cn_safety", "name": "中国电动车 · 安全", "target": "Chinese electric vehicles", "aspect": "safety of Chinese electric vehicles", "hypothesis": "This sentence discusses the safety or privacy risks of Chinese electric vehicles."},
+    {"id": "cn_technology", "name": "中国电动车 · 技术", "target": "Chinese electric vehicles", "aspect": "technology of Chinese electric vehicles", "hypothesis": "This sentence discusses the technology or features of Chinese electric vehicles."},
+    {"id": "us_policy", "name": "美国 · 进口限制", "target": "US restrictions on Chinese electric vehicles", "aspect": "US restrictions on Chinese electric vehicles", "hypothesis": "This sentence discusses US restrictions or tariffs on Chinese electric vehicles."},
+    {"id": "us_competition", "name": "美国车企 · 竞争力", "target": "US automakers", "aspect": "competitiveness of US automakers", "hypothesis": "This sentence discusses the competitiveness of US automakers."}
+  ]
+}

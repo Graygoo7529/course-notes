@@ -1,0 +1,23 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*.pyd
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local data and models; report deliverables are versioned
+/data/
+/model/
+/outputs/
+/figures/
+
+# Downloaded models and caches
+.cache/
+huggingface/
+
+# Local logs
+*.log
+.tools/

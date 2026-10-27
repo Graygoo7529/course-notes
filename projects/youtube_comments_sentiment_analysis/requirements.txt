@@ -1,0 +1,21 @@
+# Versions used for this run (Python 3.13); torch uses the installed CPU build.
+# Optional browser QA dependency is included so ty can check check_report.py.
+playwright==1.64.1
+pandas==3.1.0
+numpy==2.5.4
+torch==2.14.1
+transformers==5.20.2
+huggingface-hub==2.3.0
+sentence-transformers==6.2.0
+sentencepiece==0.2.2
+bertopic==0.17.4
+umap-learn==0.5.12
+hdbscan==0.8.44
+scikit-learn==1.9.1
+matplotlib==3.11.2
+plotly==7.1.0
+spacy==3.8.16
+langdetect==1.0.9
+tqdm==4.70.1
+requests==2.34.2
+ty==0.0.92

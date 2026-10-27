@@ -1,0 +1,6 @@
+[tool.ty.environment]
+python-version = "3.13"
+
+[tool.ty.src]
+include = ["scripts"]
+exclude = [".tools", "model", "data"]

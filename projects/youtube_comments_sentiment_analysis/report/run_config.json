@@ -1,0 +1,557 @@
+{
+  "stages": {
+    "prepare": {
+      "status": "complete",
+      "seconds": 2.39,
+      "original_count": 1196,
+      "english_count": 1082,
+      "excluded_count": 114,
+      "exclusion_reasons": {
+        "included": 1082,
+        "short_uncertain": 37,
+        "cjk_or_mixed": 35,
+        "other_language": 28,
+        "language_uncertain": 13,
+        "empty": 1
+      },
+      "type_counts": {
+        "comment": 699,
+        "reply": 497
+      },
+      "duplicate_groups": 2,
+      "included_types": {
+        "comment": 651,
+        "reply": 431
+      }
+    },
+    "sentiment": {
+      "status": "complete",
+      "seconds": 33.29,
+      "success": 1082,
+      "failed": 0,
+      "truncated": 0,
+      "labels": {
+        "negative": 612,
+        "neutral": 335,
+        "positive": 135
+      }
+    },
+    "topics": {
+      "status": "complete",
+      "seconds": 27.36,
+      "count": 1082,
+      "topic_count": 9,
+      "unassigned": 341,
+      "embedding_dimension": 384,
+      "embedding_max_length": 256,
+      "embedding_truncated": 5,
+      "parameters": {
+        "umap_neighbors": 15,
+        "umap_components": 5,
+        "min_cluster_size": 20,
+        "min_samples": 5
+      }
+    },
+    "mentions": {
+      "status": "complete",
+      "seconds": 225.89,
+      "sample_size": 200,
+      "sentence_count": 471,
+      "candidate_pairs": 2826,
+      "success": 2826,
+      "failed": 0,
+      "detected_pairs": 358,
+      "context_deferred": 82,
+      "eligible_pairs": 276,
+      "truncated_pairs": 0,
+      "threshold": 0.6
+    },
+    "aspects": {
+      "status": "complete",
+      "seconds": 13.01,
+      "success": 276,
+      "failed": 0,
+      "truncated": 0,
+      "comment_aspect_records": 206,
+      "matched_comments": 104,
+      "mixed_records": 13
+    },
+    "summarize": {
+      "status": "complete",
+      "seconds": 0.06,
+      "validation": "passed",
+      "records": 1196,
+      "valid_sentiments": 1082,
+      "unmatched_sample_comments": 96
+    }
+  },
+  "signature": "87c571b6c63b6188c097566f1b1588f63327bd4cc0bf6db507a27e61343d3913",
+  "input_sha256": "0ac1dbc65793e0ef1a82897f16b3b94fc30d44e648138e0065baf6a695beed90",
+  "config": {
+    "seed": 42,
+    "proxy": "http://127.0.0.1:7897",
+    "verify_ssl": false,
+    "torch_threads": 6,
+    "batch_size": 8,
+    "max_length": 512,
+    "aspect_max_length": 256,
+    "sample_size": 200,
+    "mention_threshold": 0.6,
+    "language_min_probability": 0.8,
+    "models": {
+      "sentiment": "cardiffnlp/twitter-roberta-base-sentiment-latest",
+      "embedding": "sentence-transformers/all-MiniLM-L6-v2",
+      "mention": "facebook/bart-large-mnli",
+      "absa": "yangheng/deberta-v3-base-absa-v1.1"
+    },
+    "aspects": [
+      {
+        "id": "cn_price",
+        "name": "中国电动车 · 价格",
+        "target": "Chinese electric vehicles",
+        "aspect": "price of Chinese electric vehicles",
+        "hypothesis": "This sentence discusses the price or affordability of Chinese electric vehicles."
+      },
+      {
+        "id": "cn_quality",
+        "name": "中国电动车 · 质量",
+        "target": "Chinese electric vehicles",
+        "aspect": "quality of Chinese electric vehicles",
+        "hypothesis": "This sentence discusses the quality or reliability of Chinese electric vehicles."
+      },
+      {
+        "id": "cn_safety",
+        "name": "中国电动车 · 安全",
+        "target": "Chinese electric vehicles",
+        "aspect": "safety of Chinese electric vehicles",
+        "hypothesis": "This sentence discusses the safety or privacy risks of Chinese electric vehicles."
+      },
+      {
+        "id": "cn_technology",
+        "name": "中国电动车 · 技术",
+        "target": "Chinese electric vehicles",
+        "aspect": "technology of Chinese electric vehicles",
+        "hypothesis": "This sentence discusses the technology or features of Chinese electric vehicles."
+      },
+      {
+        "id": "us_policy",
+        "name": "美国 · 进口限制",
+        "target": "US restrictions on Chinese electric vehicles",
+        "aspect": "US restrictions on Chinese electric vehicles",
+        "hypothesis": "This sentence discusses US restrictions or tariffs on Chinese electric vehicles."
+      },
+      {
+        "id": "us_competition",
+        "name": "美国车企 · 竞争力",
+        "target": "US automakers",
+        "aspect": "competitiveness of US automakers",
+        "hypothesis": "This sentence discusses the competitiveness of US automakers."
+      }
+    ]
+  },
+  "device": "cpu",
+  "python": "3.13.14 | packaged by Anaconda, Inc. | (main, Jun 17 2026, 20:04:52) [MSC v.1942 64 bit (AMD64)]",
+  "updated_at": "2026-10-26T16:08:41.093101+00:00",
+  "packages": {
+    "torch": "2.14.1",
+    "transformers": "5.20.2",
+    "sentence-transformers": "6.2.0",
+    "bertopic": "0.17.4",
+    "umap-learn": "0.5.12",
+    "hdbscan": "0.8.44",
+    "plotly": "7.1.0",
+    "langdetect": "1.0.9",
+    "spacy": "3.8.16",
+    "pandas": "3.1.0",
+    "numpy": "2.5.4",
+    "matplotlib": "3.11.2"
+  },
+  "models": {
+    "sentiment": {
+      "repo": "cardiffnlp/twitter-roberta-base-sentiment-latest",
+      "revision": "3216a57f2a0d9c45a2e6c20157c20c49fb4bf9c7",
+      "files": [
+        {
+          "name": "README.md",
+          "bytes": 4328,
+          "sha256": "05ad85143ed60f0abe631ab935485db046c24710d9bec50829b017cfc1e12bf7"
+        },
+        {
+          "name": "config.json",
+          "bytes": 929,
+          "sha256": "d2fba19997da698157196ba16f5fcb30a97a7551cef6845a0f3d743ee19c6129"
+        },
+        {
+          "name": "merges.txt",
+          "bytes": 456318,
+          "sha256": "1ce1664773c50f3e0cc8842619a93edc4624525b728b188a9e0be33b7726adc5"
+        },
+        {
+          "name": "pytorch_model.bin",
+          "bytes": 501045531,
+          "sha256": "4d24a3e32a88ed1c4e5b789fc6644e2e767500554e954b27dccf52a8e762cbae"
+        },
+        {
+          "name": "special_tokens_map.json",
+          "bytes": 239,
+          "sha256": "378eb3bf733eb16e65792d7e3fda5b8a4631387ca04d2015199c4d4f22ae554d"
+        },
+        {
+          "name": "vocab.json",
+          "bytes": 898822,
+          "sha256": "06b4d46c8e752d410213d9548eb27a54db70fda0319b6271fb8d59dead5e1cab"
+        }
+      ]
+    },
+    "embedding": {
+      "repo": "sentence-transformers/all-MiniLM-L6-v2",
+      "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+      "files": [
+        {
+          "name": "1_Pooling/config.json",
+          "bytes": 190,
+          "sha256": "4be450dde3b0273bb9787637cfbd28fe04a7ba6ab9d36ac48e92b11e350ffc23"
+        },
+        {
+          "name": "README.md",
+          "bytes": 10502,
+          "sha256": "dcd602d2fd35c203a247304a06fec6654a12f7941b739f9221a064fe8dc3b7f0"
+        },
+        {
+          "name": "config.json",
+          "bytes": 612,
+          "sha256": "953f9c0d463486b10a6871cc2fd59f223b2c70184f49815e7efbcab5d8908b41"
+        },
+        {
+          "name": "config_sentence_transformers.json",
+          "bytes": 116,
+          "sha256": "061ca9d39661d6c6d6de5ba27f79a1cd5770ea247f8d46412a68a498dc5ac9f3"
+        },
+        {
+          "name": "data_config.json",
+          "bytes": 39265,
+          "sha256": "32edcb108fc2516b920734a862ae0692bcae1c5d45d5f8d972cb0d53434a4c54"
+        },
+        {
+          "name": "model.safetensors",
+          "bytes": 90868376,
+          "sha256": "53aa51172d142c89d9012cce15ae4d6cc0ca6895895114379cacb4fab128d9db"
+        },
+        {
+          "name": "modules.json",
+          "bytes": 349,
+          "sha256": "84e40c8e006c9b1d6c122e02cba9b02458120b5fb0c87b746c41e0207cf642cf"
+        },
+        {
+          "name": "sentence_bert_config.json",
+          "bytes": 53,
+          "sha256": "fc1993fde0a95c24ec6c022539d41cf6e2f7c9721e5415d6fb6897472a9cd4b7"
+        },
+        {
+          "name": "special_tokens_map.json",
+          "bytes": 112,
+          "sha256": "303df45a03609e4ead04bc3dc1536d0ab19b5358db685b6f3da123d05ec200e3"
+        },
+        {
+          "name": "tokenizer.json",
+          "bytes": 466247,
+          "sha256": "be50c3628f2bf5bb5e3a7f17b1f74611b2561a3a27eeab05e5aa30f411572037"
+        },
+        {
+          "name": "tokenizer_config.json",
+          "bytes": 350,
+          "sha256": "acb92769e8195aabd29b7b2137a9e6d6e25c476a4f15aa4355c233426c61576b"
+        },
+        {
+          "name": "vocab.txt",
+          "bytes": 231508,
+          "sha256": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+        }
+      ]
+    },
+    "mention": {
+      "repo": "facebook/bart-large-mnli",
+      "revision": "d7645e127eaf1aefc7862fd59a17a5aa8558b8ce",
+      "files": [
+        {
+          "name": "README.md",
+          "bytes": 3793,
+          "sha256": "d022b7cb54ca2f65fac41cf6c9601b4491b4ac22a301227288a38beef2a18aeb"
+        },
+        {
+          "name": "config.json",
+          "bytes": 1154,
+          "sha256": "a0f9bcb245b680a96ccae0ad8d155f267ec3e3c971ef4a4937e52ea9ba368a86"
+        },
+        {
+          "name": "merges.txt",
+          "bytes": 456318,
+          "sha256": "1ce1664773c50f3e0cc8842619a93edc4624525b728b188a9e0be33b7726adc5"
+        },
+        {
+          "name": "model.safetensors",
+          "bytes": 1629437147,
+          "sha256": "cfbb687dbbd9df99fe865e1860350a22aebac4d26ee4bcb50217f1df606a018e"
+        },
+        {
+          "name": "tokenizer.json",
+          "bytes": 1355863,
+          "sha256": "847bbeab6174d66a88898f729d52fa8d355fafe1bea101cf960dd404581df70e"
+        },
+        {
+          "name": "tokenizer_config.json",
+          "bytes": 26,
+          "sha256": "5e04eb606e3a1583530a42e36c2a6b6615c86f34fe77e44d9ddeb43ff940931f"
+        },
+        {
+          "name": "vocab.json",
+          "bytes": 898822,
+          "sha256": "06b4d46c8e752d410213d9548eb27a54db70fda0319b6271fb8d59dead5e1cab"
+        }
+      ]
+    },
+    "absa": {
+      "repo": "yangheng/deberta-v3-base-absa-v1.1",
+      "revision": "10c9dff335a44073e1352360c3a7bc54dc58eb01",
+      "files": [
+        {
+          "name": "README.md",
+          "bytes": 7529,
+          "sha256": "820b81b6e822a99aad399d8d78f759385f920dd9cf32900a18b5974c9e4cfdc4"
+        },
+        {
+          "name": "added_tokens.json",
+          "bytes": 18,
+          "sha256": "cd0141b19e809eb963a8f8244fad72530233f729e1f6960d281e1fbb3537b2fb"
+        },
+        {
+          "name": "config.json",
+          "bytes": 1032,
+          "sha256": "fd2cb71859840be42a8bd13ee5e2849608b44bac77a9d7c75ac77b4bd4276be1"
+        },
+        {
+          "name": "model.safetensors",
+          "bytes": 737726548,
+          "sha256": "270559fb59fec507f6a105d2c7765af0b61c685670dbbcf52e551c6fa160601e"
+        },
+        {
+          "name": "special_tokens_map.json",
+          "bytes": 156,
+          "sha256": "fcfbeb4e25cd37fb5b8030406394253b245230fd3b552750092bab7d24d827da"
+        },
+        {
+          "name": "spm.model",
+          "bytes": 2464616,
+          "sha256": "c679fbf93643d19aab7ee10c0b99e460bdbc02fedf34b92b05af343b4af586fd"
+        },
+        {
+          "name": "tokenizer_config.json",
+          "bytes": 372,
+          "sha256": "18893ee284f616237d508c05b50d49a3f098f534e4b7f57262c7f0a9c0ae3930"
+        }
+      ]
+    }
+  },
+  "sample_ids": [
+    "YT0060",
+    "YT0489",
+    "YT0636",
+    "YT0757",
+    "YT0055",
+    "YT1016",
+    "YT0654",
+    "YT0944",
+    "YT0075",
+    "YT0890",
+    "YT0667",
+    "YT0750",
+    "YT0106",
+    "YT1191",
+    "YT0996",
+    "YT0813",
+    "YT1024",
+    "YT0293",
+    "YT0501",
+    "YT0278",
+    "YT0248",
+    "YT0503",
+    "YT0867",
+    "YT0233",
+    "YT0438",
+    "YT0091",
+    "YT0790",
+    "YT0909",
+    "YT0480",
+    "YT0119",
+    "YT0525",
+    "YT0734",
+    "YT0663",
+    "YT0300",
+    "YT0555",
+    "YT0166",
+    "YT0514",
+    "YT0115",
+    "YT0922",
+    "YT0212",
+    "YT0997",
+    "YT0824",
+    "YT0222",
+    "YT0904",
+    "YT0463",
+    "YT0741",
+    "YT0313",
+    "YT0427",
+    "YT0033",
+    "YT0896",
+    "YT0708",
+    "YT0386",
+    "YT0730",
+    "YT1011",
+    "YT0635",
+    "YT0880",
+    "YT0772",
+    "YT0260",
+    "YT0812",
+    "YT0149",
+    "YT0147",
+    "YT0631",
+    "YT0316",
+    "YT1088",
+    "YT1119",
+    "YT0471",
+    "YT0354",
+    "YT0321",
+    "YT0859",
+    "YT0687",
+    "YT0753",
+    "YT0800",
+    "YT0358",
+    "YT0273",
+    "YT0380",
+    "YT0836",
+    "YT1168",
+    "YT0093",
+    "YT0573",
+    "YT0422",
+    "YT0344",
+    "YT0576",
+    "YT0230",
+    "YT0362",
+    "YT0063",
+    "YT0607",
+    "YT1053",
+    "YT0775",
+    "YT0978",
+    "YT0431",
+    "YT0025",
+    "YT0211",
+    "YT0444",
+    "YT0543",
+    "YT0203",
+    "YT0572",
+    "YT0959",
+    "YT0486",
+    "YT0746",
+    "YT0332",
+    "YT1076",
+    "YT0224",
+    "YT0857",
+    "YT0604",
+    "YT0113",
+    "YT0564",
+    "YT0516",
+    "YT0805",
+    "YT0053",
+    "YT1101",
+    "YT1072",
+    "YT1144",
+    "YT0456",
+    "YT0081",
+    "YT0643",
+    "YT0011",
+    "YT0593",
+    "YT0413",
+    "YT0504",
+    "YT0225",
+    "YT0345",
+    "YT0921",
+    "YT1036",
+    "YT1089",
+    "YT0872",
+    "YT0744",
+    "YT0101",
+    "YT0088",
+    "YT1042",
+    "YT0876",
+    "YT1081",
+    "YT0701",
+    "YT0854",
+    "YT0182",
+    "YT0600",
+    "YT1002",
+    "YT0412",
+    "YT0633",
+    "YT0964",
+    "YT0470",
+    "YT0083",
+    "YT0770",
+    "YT0719",
+    "YT0446",
+    "YT1009",
+    "YT0423",
+    "YT0042",
+    "YT0032",
+    "YT0871",
+    "YT0144",
+    "YT0058",
+    "YT1154",
+    "YT1128",
+    "YT1097",
+    "YT0586",
+    "YT0856",
+    "YT0337",
+    "YT0004",
+    "YT0334",
+    "YT0333",
+    "YT1163",
+    "YT0709",
+    "YT1026",
+    "YT0793",
+    "YT1193",
+    "YT0062",
+    "YT0068",
+    "YT0615",
+    "YT0370",
+    "YT0105",
+    "YT0176",
+    "YT0764",
+    "YT0360",
+    "YT0322",
+    "YT0533",
+    "YT0603",
+    "YT0186",
+    "YT0264",
+    "YT0971",
+    "YT0761",
+    "YT0390",
+    "YT0457",
+    "YT0071",
+    "YT0306",
+    "YT0072",
+    "YT1164",
+    "YT0013",
+    "YT0359",
+    "YT0777",
+    "YT0540",
+    "YT0590",
+    "YT0702",
+    "YT0773",
+    "YT0195",
+    "YT0347",
+    "YT0381",
+    "YT0393",
+    "YT0617",
+    "YT1029",
+    "YT1061"
+  ]
+}

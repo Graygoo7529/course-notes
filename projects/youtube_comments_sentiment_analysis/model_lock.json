@@ -1,0 +1,18 @@
+{
+  "sentiment": {
+    "repo": "cardiffnlp/twitter-roberta-base-sentiment-latest",
+    "revision": "3216a57f2a0d9c45a2e6c20157c20c49fb4bf9c7"
+  },
+  "embedding": {
+    "repo": "sentence-transformers/all-MiniLM-L6-v2",
+    "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
+  },
+  "mention": {
+    "repo": "facebook/bart-large-mnli",
+    "revision": "d7645e127eaf1aefc7862fd59a17a5aa8558b8ce"
+  },
+  "absa": {
+    "repo": "yangheng/deberta-v3-base-absa-v1.1",
+    "revision": "10c9dff335a44073e1352360c3a7bc54dc58eb01"
+  }
+}

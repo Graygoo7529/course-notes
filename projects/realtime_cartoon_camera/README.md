@@ -12,7 +12,7 @@
 - OpenVINO 两档特征模型与 manifest；Python/PyTorch/OpenVINO 对照；可移植 C++ 单图探针。
 - 运行信息面板：真实后端、漫画更新率、算法耗时、提交到显示延迟、跳过帧、关键点状态。
 
-Android 本地相机应用尚未实现。目前完成了模型导出、手机宽度界面及原生探针准备；本机尚无可用 Android SDK/NDK、ARM64 OpenVINO 运行库和已连接设备。不能把手机宽度界面或 Windows C++ 测试视为手机推理成功。
+Android 使用同一个 MobileNetV3，通过 ONNX Runtime Android CPU 执行；Kotlin/OpenCV 实现预处理、结构响应与栅格渲染，MediaPipe 提供人脸区域。模型随 APK 内置，不需要电脑服务。预览长边 256、拍照长边 384；手机拍照使用栅格线条，桌面保留样条精修。构建方式和真机验证边界见 [Android 打包与安装](native/android/README.md)。
 
 ## 启动
 
@@ -36,7 +36,7 @@ Windows 调试可执行文件：`apps/desktop/src-tauri/target/debug/realtime-ca
 - [架构说明](docs/架构说明.md)：算法、通信、调度与生命周期。
 - [验证记录](docs/验证记录.md)：实际测试、截图和局限。
 - [OpenVINO 与 C++ 探针](native/openvino/README.md)。
-- [Android 下一阶段](native/android/README.md)。
+- [Android 打包与安装](native/android/README.md)。
 - [推荐技术路线](../../references/实时漫画相机应用技术路线.md)。
 
 `data/`、`models/`、`.cache/`、`node_modules/`、构建产物均忽略。已有课程笔记和上阶段算法文件保持原样，通过路径导入复用。

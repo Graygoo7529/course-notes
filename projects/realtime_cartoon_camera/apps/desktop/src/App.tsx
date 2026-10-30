@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Aperture, Camera, CameraOff, Download, FlipHorizontal2, Pause, Play, RefreshCw, SlidersHorizontal, X } from 'lucide-react';
-import { isTauri, savePng, Runtime } from './runtime';
+import { isAndroid, isTauri, savePng, Runtime } from './runtime';
 import { LatestFrameScheduler } from './scheduler';
 import type { FrameMeta, Phase, RuntimeInfo, Stats, StyleConfig } from './protocol';
 
@@ -11,6 +11,7 @@ const blobFrom = (canvas: HTMLCanvasElement, type: string) => new Promise<Blob>(
   canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('无法读取摄像头图像')), type, .9));
 
 export default function App() {
+  const android = isAndroid();
   const video = useRef<HTMLVideoElement>(null), cartoon = useRef<HTMLCanvasElement>(null);
   const stream = useRef<MediaStream | null>(null), runtime = useRef<Runtime | null>(null);
   const queue = useRef<LatestFrameScheduler | null>(null);
@@ -147,7 +148,7 @@ export default function App() {
       const result = await service.process(meta, blob);
       if (generation !== epoch.current) return;
       setStill({ blob: result.image, url: URL.createObjectURL(result.image) });
-      setPhase('paused'); setMessage('精修完成。保存方向与拍照时的镜像设置一致。');
+      setPhase('paused'); setMessage('处理完成。保存方向与拍照时的镜像设置一致。');
     } catch (error) { if (generation === epoch.current) fail(error as Error); }
   };
   const active = ['running', 'paused', 'capturing'].includes(phase);
@@ -163,7 +164,7 @@ export default function App() {
     <section className="controls"><div className="button-row">
       <button className="primary" disabled={changing} onClick={() => active ? void stop() : void start()}>{active ? <CameraOff/> : <Camera/>}{active ? '停止相机' : '开启相机'}</button>
       <button disabled={!['running','paused'].includes(phase)} onClick={() => void pause()}>{phase === 'paused' ? <Play/> : <Pause/>}{phase === 'paused' ? '继续预览' : '暂停处理'}</button>
-      <button className="capture-button" disabled={!['running','paused'].includes(phase)} onClick={() => void capture()}><Aperture/>{phase === 'capturing' ? '正在精修…' : '拍照精修'}</button>
+      <button className="capture-button" disabled={!['running','paused'].includes(phase)} onClick={() => void capture()}><Aperture/>{phase === 'capturing' ? '正在处理…' : android ? '拍照成片' : '拍照精修'}</button>
       <button disabled={changing} onClick={() => { const next = camera === 'user' ? 'environment' : 'user'; setCamera(next); if (active) void start(next); }}><RefreshCw/>{camera === 'user' ? '切换后置' : '切换前置'}</button>
       <button className={'icon-button ' + (style.mirrored ? 'selected' : '')} disabled={changing} aria-label="切换镜像" title="镜像显示与保存" onClick={() => update({ mirrored: !style.mirrored })}><FlipHorizontal2/></button>
     </div><div className="option-row"><label className="density">笔画密度 <input aria-label="笔画密度" type="range" min="0" max="1" step=".05" value={style.lineDensity} disabled={changing} onChange={e => update({ lineDensity: +e.target.value })}/><output>{Math.round(style.lineDensity * 100)}%</output></label>
@@ -171,12 +172,12 @@ export default function App() {
       <button className="text-button" onClick={() => setDebug(!debug)}><SlidersHorizontal/>运行信息</button></div></section>
     {message && <p role="status" className={'notice ' + (phase === 'error' ? 'error' : '')}>{message}</p>}
     {debug && <section className="debug">
-      <label>推理后端<select aria-label="推理后端" value={backend} disabled={phase !== 'idle' && phase !== 'error'} onChange={e => setBackend(e.target.value)}><option value="openvino">OpenVINO CPU</option><option value="pytorch">PyTorch CPU</option></select></label>
+      {android ? <Cell title="推理后端" value="ONNX Runtime · 手机 CPU"/> : <label>推理后端<select aria-label="推理后端" value={backend} disabled={phase !== 'idle' && phase !== 'error'} onChange={e => setBackend(e.target.value)}><option value="openvino">OpenVINO CPU</option><option value="pytorch">PyTorch CPU</option></select></label>}
       <Cell title="当前后端 / 尺寸" value={info ? info.backend + ' / 256 px' : '未连接'}/>
       <Cell title="漫画更新率" value={stats.fps + ' FPS'}/><Cell title="算法 / 提交到显示" value={stats.processingMs.toFixed(1) + ' / ' + stats.latencyMs.toFixed(1) + ' ms'}/>
       <Cell title="已显示 / 跳过帧" value={stats.displayed + ' / ' + stats.dropped}/><Cell title="关键点 / 冷启动" value={stats.faceStatus + (info ? ' / ' + info.coldStartMs.toFixed(0) + ' ms' : '')}/>
     </section>}
-    <footer><span><i className="local-dot"/>画面在本机处理</span><span>256 实时预览 · 384 样条精修 · {isTauri() ? 'Tauri 桌面' : '本机开发模式'}</span></footer>
+    <footer><span><i className="local-dot"/>画面在本机处理</span><span>256 实时预览 · {android ? '384 栅格成片 · Android' : `384 样条精修 · ${isTauri() ? 'Tauri 桌面' : '本机开发模式'}`}</span></footer>
     {still && <div className="modal" role="dialog" aria-label="精修结果"><div className="still-card"><button className="close" aria-label="关闭精修结果" onClick={() => setStill(null)}><X/></button><h2>这一帧，已成画。</h2><img src={still.url} alt="当前冻结原帧生成的精修漫画"/><button className="primary" onClick={() => { void savePng(still.blob).then(path => setMessage('已保存：' + path)).catch(fail); }}><Download/>保存 PNG</button><p>已按拍照时的镜像设置处理方向。</p></div></div>}
   </main>;
 }

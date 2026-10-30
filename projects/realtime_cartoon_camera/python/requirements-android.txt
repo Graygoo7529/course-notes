@@ -1,0 +1,4 @@
+# Only needed on the build computer to export/validate the frozen CNN.
+-r requirements.txt
+onnx==1.23.2
+onnxruntime==1.31.1

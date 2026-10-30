@@ -1,0 +1,7 @@
+{
+  "identifier": "android-camera",
+  "description": "手机本机推理与相册保存",
+  "platforms": ["android"],
+  "windows": ["main"],
+  "permissions": ["core:default", "cartoon:default"]
+}

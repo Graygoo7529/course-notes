@@ -1,14 +1,18 @@
 import { invoke } from '@tauri-apps/api/core';
 import type { FrameMeta, FrameResult, RuntimeInfo } from './protocol';
+import { AndroidRuntime, toBase64 } from './android-runtime.ts';
 
 export const isTauri = () => '__TAURI_INTERNALS__' in window;
+export const isAndroid = () => isTauri() && /Android/i.test(navigator.userAgent);
 export class Runtime {
+  private mobile: AndroidRuntime | null = null;
   private socket: WebSocket | null = null;
   private closed = false;
   private workerToken: string | null = null;
   private descriptorTask: Promise<{ url: string; token: string }> | null = null;
   private pending: { resolve: (result: FrameResult) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> } | null = null;
   async connect(sessionId: string, backend: string): Promise<RuntimeInfo> {
+    if (isAndroid()) { this.mobile = new AndroidRuntime(); return this.mobile.connect(sessionId); }
     this.descriptorTask = isTauri() ? invoke('start_worker') :
       fetch('/api/runtime', { cache: 'no-store' }).then(async response => {
         if (!response.ok) throw new Error(await response.text()); return response.json();
@@ -47,6 +51,7 @@ export class Runtime {
     if (this.pending) { clearTimeout(this.pending.timer); this.pending.reject(error); this.pending = null; }
   }
   async process(meta: FrameMeta, image: Blob): Promise<FrameResult> {
+    if (this.mobile) return this.mobile.process(meta, image);
     if (this.pending) throw new Error('Only one frame may be in flight');
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) throw new Error('算法尚未连接');
     const header = new TextEncoder().encode(JSON.stringify(meta));
@@ -57,8 +62,9 @@ export class Runtime {
       this.socket!.send(new Blob([length, header, image]));
     });
   }
-  reset() { if (this.socket?.readyState === WebSocket.OPEN) this.socket.send(JSON.stringify({ type: 'reset' })); }
+  reset() { if (this.mobile) this.mobile.reset(); else if (this.socket?.readyState === WebSocket.OPEN) this.socket.send(JSON.stringify({ type: 'reset' })); }
   async close() {
+    if (this.mobile) { await this.mobile.close(); return; }
     this.closed = true;
     this.fail(new Error('Session stopped')); this.socket?.close(); this.socket = null;
     // Finish a pending launch before another session can reuse the global worker.
@@ -69,6 +75,10 @@ export class Runtime {
 
 export async function savePng(image: Blob): Promise<string> {
   const filename = `cartoon-${Date.now()}.png`;
+  if (isAndroid()) {
+    const result = await invoke<{ path: string }>('plugin:cartoon|save_png', { payload: { image: await toBase64(image), filename } });
+    return result.path;
+  }
   if (isTauri()) return invoke('save_png', { bytes: Array.from(new Uint8Array(await image.arrayBuffer())), filename });
   const url = URL.createObjectURL(image); const link = document.createElement('a');
   link.href = url; link.download = filename; link.click(); setTimeout(() => URL.revokeObjectURL(url), 30000);

@@ -1,0 +1,3 @@
+[default]
+description = "Local Android cartoon camera operations"
+permissions = ["allow-initialize", "allow-process-frame", "allow-reset", "allow-stop", "allow-save-png"]

@@ -1,0 +1,18 @@
+[package]
+name = "tauri-plugin-cartoon"
+version = "0.1.0"
+authors = [ "Course Notes" ]
+description = "Offline Android cartoon inference and gallery save"
+edition = "2024"
+rust-version = "1.90"
+exclude = ["/examples", "/dist-js", "/guest-js", "/node_modules"]
+links = "tauri-plugin-cartoon"
+
+[dependencies]
+tauri = { version = "2.12.5" }
+serde = "1.0"
+serde_json = "1"
+thiserror = "2"
+
+[build-dependencies]
+tauri-plugin = { version = "2.7.2", features = ["build"] }

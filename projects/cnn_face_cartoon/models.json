@@ -11,20 +11,20 @@
     "timm_id": "seresnet50.a1_in1k",
     "hf_repo": "timm/seresnet50.a1_in1k",
     "revision": "23f3482ee9acc4f51a2668a7cdf255fbd9420417",
-    "status": "downloading"
+    "status": "downloaded"
   },
   "efficientnetv2": {
     "display_name": "EfficientNetV2-S",
     "timm_id": "tf_efficientnetv2_s.in21k_ft_in1k",
     "hf_repo": "timm/tf_efficientnetv2_s.in21k_ft_in1k",
-    "revision": null,
-    "status": "model_card_verified_not_downloaded"
+    "revision": "ea9abc143ea2b9d8e1ec1de277bce02149b9cf0e",
+    "status": "downloaded"
   },
   "mobilenetv3": {
     "display_name": "MobileNetV3-Large",
     "timm_id": "mobilenetv3_large_100.ra_in1k",
     "hf_repo": "timm/mobilenetv3_large_100.ra_in1k",
-    "revision": null,
-    "status": "model_card_verified_not_downloaded"
+    "revision": "96f46a1c52932f27492dff66c72378eb99b443a7",
+    "status": "downloaded"
   }
 }

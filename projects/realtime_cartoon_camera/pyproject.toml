@@ -1,0 +1,5 @@
+[tool.ty.environment]
+python-version = "3.13"
+extra-paths = ["python", "../cnn_face_cartoon/src"]
+[tool.ty.src]
+include = ["python", "tests"]

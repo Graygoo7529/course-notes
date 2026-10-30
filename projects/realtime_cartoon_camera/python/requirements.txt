@@ -1,0 +1,4 @@
+# The resident desktop worker imports the already verified cnn_face_cartoon env.
+# Additional dependencies for this project's default local runtime:
+openvino==2026.4.1
+websockets==17.3

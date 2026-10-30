@@ -1,0 +1,7 @@
+[tool.ty.environment]
+python-version = "3.13"
+extra-paths = ["src"]
+
+[tool.ty.src]
+include = ["src", "scripts"]
+exclude = ["data", "model", "outputs", ".cache", ".deps"]

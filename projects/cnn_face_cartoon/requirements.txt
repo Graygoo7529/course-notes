@@ -1,0 +1,13 @@
+# Initial dependency declarations, not a verified lock file.
+# Inspect pip's plan before changing the existing torch installation.
+torch
+torchvision
+timm
+opencv-contrib-python
+numpy
+Pillow
+scipy
+matplotlib
+huggingface-hub
+safetensors
+ty

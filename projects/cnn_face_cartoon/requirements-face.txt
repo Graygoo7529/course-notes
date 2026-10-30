@@ -1,0 +1,2 @@
+# Install separately after checking Windows / Python wheel compatibility.
+mediapipe

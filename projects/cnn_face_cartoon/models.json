@@ -1,0 +1,30 @@
+{
+  "resnet50": {
+    "display_name": "ResNet50",
+    "timm_id": "resnet50.a1_in1k",
+    "hf_repo": "timm/resnet50.a1_in1k",
+    "revision": null,
+    "status": "model_card_verified_not_downloaded"
+  },
+  "senet": {
+    "display_name": "SE-ResNet50",
+    "timm_id": "seresnet50.a1_in1k",
+    "hf_repo": "timm/seresnet50.a1_in1k",
+    "revision": null,
+    "status": "model_card_verified_not_downloaded"
+  },
+  "efficientnetv2": {
+    "display_name": "EfficientNetV2-S",
+    "timm_id": "tf_efficientnetv2_s.in21k_ft_in1k",
+    "hf_repo": "timm/tf_efficientnetv2_s.in21k_ft_in1k",
+    "revision": null,
+    "status": "model_card_verified_not_downloaded"
+  },
+  "mobilenetv3": {
+    "display_name": "MobileNetV3-Large",
+    "timm_id": "mobilenetv3_large_100.ra_in1k",
+    "hf_repo": "timm/mobilenetv3_large_100.ra_in1k",
+    "revision": null,
+    "status": "model_card_verified_not_downloaded"
+  }
+}

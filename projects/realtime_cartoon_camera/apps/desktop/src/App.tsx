@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Aperture, Camera, CameraOff, Download, FlipHorizontal2, Pause, Play, RefreshCw, SlidersHorizontal, X } from 'lucide-react';
 import { isAndroid, isTauri, savePng, Runtime } from './runtime';
 import { LatestFrameScheduler } from './scheduler';
+import { createSessionId } from './session-id';
 import type { FrameMeta, Phase, RuntimeInfo, Stats, StyleConfig } from './protocol';
 
 const initial: StyleConfig = { revision: 0, lineDensity: .5, palette: 'natural_warm', mirrored: true };
@@ -68,7 +69,7 @@ export default function App() {
       const v = video.current; if (!v) throw new Error('视频预览不可用');
       v.srcObject = media; await v.play();
       if (generation !== epoch.current) return;
-      setPhase('warming'); session.current = crypto.randomUUID(); frame.current = 0;
+      setPhase('warming'); session.current = createSessionId(); frame.current = 0;
       const service = new Runtime(); runtime.current = service;
       const ready = await service.connect(session.current, backend);
       if (generation !== epoch.current) { await service.close(); return; }

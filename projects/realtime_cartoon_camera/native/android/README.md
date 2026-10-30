@@ -6,6 +6,8 @@
 
 构建脚本把调试签名 APK 复制到 `dist-android/CartoonCamera-arm64-debug.apk`。传到手机，在文件管理器中打开并允许该来源安装。首次启动允许摄像头权限；开始后等待模型预热。拍照后“保存 PNG”写入相册 `Pictures/CartoonCamera`。
 
+当前版本 0.1.1，修复部分 WebView 缺少 `crypto.randomUUID` 导致的启动错误。使用与 0.1.0 相同的签名，可直接覆盖安装。
+
 APK 包含前端、MobileNetV3、MediaPipe 模型及原生推理库，无需 Python、电脑服务或联网下载模型。调试签名用于课程安装测试，尚未配置应用商店发行签名。
 
 ## 本机编译

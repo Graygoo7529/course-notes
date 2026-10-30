@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "实时漫画相机",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "identifier": "cn.coursenotes.realtimecartooncamera",
   "build": {
     "beforeDevCommand": {"script": "npm.cmd run dev", "cwd": "../.."},

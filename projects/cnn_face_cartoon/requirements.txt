@@ -10,4 +10,5 @@ scipy
 matplotlib
 huggingface-hub
 safetensors
+requests
 ty

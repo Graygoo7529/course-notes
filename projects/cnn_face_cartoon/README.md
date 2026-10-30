@@ -70,6 +70,8 @@ python -m ty check
 
 ## 后续安装
 
+可直接复制执行的完整命令见 [安装与下载](docs/安装与下载.md)。已提供 `scripts/download_models.py`，支持代理、进程内可选关闭 SSL 校验、固定 CNN revision 和离线文件校验；脚本准备好不代表权重已下载。
+
 当前依赖文件是初始声明，不是验证过的版本锁。先查看解析计划，尤其确认 `torch` 与 `torchvision` 配套，避免无意改变原有环境：
 
 ```powershell

@@ -3,15 +3,15 @@
     "display_name": "ResNet50",
     "timm_id": "resnet50.a1_in1k",
     "hf_repo": "timm/resnet50.a1_in1k",
-    "revision": null,
-    "status": "model_card_verified_not_downloaded"
+    "revision": "767268603ca0cb0bfe326fa87277f19c419566ef",
+    "status": "downloaded"
   },
   "senet": {
     "display_name": "SE-ResNet50",
     "timm_id": "seresnet50.a1_in1k",
     "hf_repo": "timm/seresnet50.a1_in1k",
-    "revision": null,
-    "status": "model_card_verified_not_downloaded"
+    "revision": "23f3482ee9acc4f51a2668a7cdf255fbd9420417",
+    "status": "downloading"
   },
   "efficientnetv2": {
     "display_name": "EfficientNetV2-S",

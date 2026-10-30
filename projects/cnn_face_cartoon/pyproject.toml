@@ -3,5 +3,5 @@ python-version = "3.13"
 extra-paths = ["src"]
 
 [tool.ty.src]
-include = ["src", "scripts"]
+include = ["src", "scripts", "run.py", "tests"]
 exclude = ["data", "model", "outputs", ".cache", ".deps"]

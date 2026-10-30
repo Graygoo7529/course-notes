@@ -1,4 +1,4 @@
-# Initial dependency declarations, not a verified lock file.
+# Dependency names; verified local versions are recorded in docs/环境检查.md (not a portable lock).
 # Inspect pip's plan before changing the existing torch installation.
 torch
 torchvision

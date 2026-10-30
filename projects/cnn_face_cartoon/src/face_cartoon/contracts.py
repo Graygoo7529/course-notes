@@ -25,6 +25,7 @@ class Transform:
 
 @dataclass(frozen=True)
 class Prepared:
+    original_rgb: RGB  # resized and padded input before denoising/brightness correction
     rgb: RGB
     valid_mask: Mask
     transform: Transform
@@ -32,6 +33,8 @@ class Prepared:
     edge_direction: Field  # gradient normal in radians, not tangent
     face_groups: dict[str, Field]
     face_status: str
+    masks: dict[str, Mask]
+    diagnostics: dict[str, Any]
 
 
 @dataclass(frozen=True)

@@ -54,8 +54,8 @@ python run.py --input outputs/20261006-231358-781351/input.png --mask outputs/20
 `--rect X Y W H` 可用原图坐标初始化；`--labels` 复用 GrabCut 的四类标签；`--mask` 复用二值前景，三种方式互斥。`--output` 指定新结果目录，程序拒绝覆盖已有目录。
 
 ~~~powershell
-python run.py --input data/input/selfie.jpg --mask outputs/your-run/mask.png --pipeline baseline
-python run.py --input data/input/selfie.jpg --mask outputs/your-run/mask.png --pipeline structure --no-thin
+python run.py --input data/input/grace_hopper.jpg --mask outputs/your-run/mask.png --pipeline baseline
+python run.py --input data/input/grace_hopper.jpg --mask outputs/your-run/mask.png --pipeline structure --no-thin
 ~~~
 
 第一条运行原有高斯、硬明度量化和灰度 Sobel；第二条仅关闭新版的线条细化。对照时应固定照片、遮罩与处理尺寸，并记录阈值变化。
@@ -66,7 +66,7 @@ python run.py --input data/input/selfie.jpg --mask outputs/your-run/mask.png --p
 
 ~~~powershell
 python run.py --input outputs/structure-v06-selfie/input.png --mask outputs/structure-v06-selfie/mask.png
-python run.py --input data/input/selfie.jpg --interactive --palette-size 6 --line-width 0.8 --render-scale 4
+python run.py --input data/input/grace_hopper.jpg --interactive --palette-size 6 --line-width 0.8 --render-scale 4
 ~~~
 
 | 参数 | 默认 | 含义 |

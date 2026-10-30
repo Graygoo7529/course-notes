@@ -1,6 +1,6 @@
 """Optional browser integration smoke; requires Playwright and running npm dev.
 
-Uses a synthetic camera stream made from the previous project's sample photo.
+Uses a synthetic camera stream made from the public sample photo.
 It never opens the physical camera. Results are kept in ignored .cache/qa/.
 """
 from __future__ import annotations
@@ -19,7 +19,7 @@ QA = ROOT / ".cache/qa"
 
 def main():
     QA.mkdir(parents=True, exist_ok=True)
-    with Image.open(ROOT.parent / "cnn_face_cartoon/data/input/selfie.png") as source:
+    with Image.open(ROOT.parent / "cnn_face_cartoon/data/input/grace_hopper.jpg") as source:
         frame = np.asarray(ImageOps.pad(source.convert("RGB"), (640, 480), color="#e7e4dc"))
     yuv = cv2.cvtColor(frame, cv2.COLOR_RGB2YUV_I420).tobytes()
     video = QA / "sample.y4m"
@@ -71,7 +71,7 @@ def main():
             page.get_by_role("button", name="停止相机", exact=True).click()
             assert not errors, errors
             (QA / "browser.json").write_text(json.dumps({"runtime_info": info, "page_errors": errors,
-                "camera": "synthetic video from existing course sample", "capture_size": [384, 288],
+                "camera": "synthetic video from public sample image", "capture_size": [384, 288],
                 "checks": ["OpenVINO preview", "face detected", "parameters", "pause", "resume", "capture", "PNG download", "stop", "restart", "390px layout"]},
                 ensure_ascii=False, indent=2), encoding="utf-8")
             print(info)

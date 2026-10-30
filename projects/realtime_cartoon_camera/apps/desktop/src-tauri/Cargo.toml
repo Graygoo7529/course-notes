@@ -1,6 +1,6 @@
 [package]
 name = "realtime-cartoon-camera"
-version = "0.1.1"
+version = "0.1.2"
 description = "Real-time CNN guided cartoon camera"
 authors = ["Course Notes"]
 edition = "2021"

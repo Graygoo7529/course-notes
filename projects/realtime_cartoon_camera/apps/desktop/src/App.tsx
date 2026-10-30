@@ -14,6 +14,7 @@ const blobFrom = (canvas: HTMLCanvasElement, type: string) => new Promise<Blob>(
 export default function App() {
   const android = isAndroid();
   const video = useRef<HTMLVideoElement>(null), cartoon = useRef<HTMLCanvasElement>(null);
+  const views = useRef<HTMLElement>(null), resultPanel = useRef<HTMLDivElement>(null);
   const stream = useRef<MediaStream | null>(null), runtime = useRef<Runtime | null>(null);
   const queue = useRef<LatestFrameScheduler | null>(null);
   const teardown = useRef<Promise<void>>(Promise.resolve());
@@ -54,6 +55,11 @@ export default function App() {
     return () => { clearInterval(timer); document.removeEventListener('visibilitychange', visibility); void stop(); };
   }, [stop]);
   useEffect(() => () => { if (still) URL.revokeObjectURL(still.url); }, [still]);
+  useEffect(() => {
+    if (still && (android || window.matchMedia('(max-width: 600px)').matches)) {
+      resultPanel.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [still, android]);
 
   const start = async (facing = camera) => {
     if (['permission', 'warming', 'capturing'].includes(phaseRef.current)) return;
@@ -92,21 +98,18 @@ export default function App() {
     } catch (error) { if (generation === epoch.current) fail(error as Error); }
   };
 
-  // A video callback only encodes when the worker is idle; no pending pixel queue.
+  // Hidden/occluded video may stop compositor callbacks in WebView. A bounded
+  // timer samples the live stream independently, still allowing just one frame.
   useEffect(() => {
     if (phase !== 'running') return;
     const v = video.current; if (!v) return;
-    let cancelled = false, id = 0, encoding = false, last = 0;
+    let cancelled = false, encoding = false;
     const canvas = document.createElement('canvas');
-    const schedule = () => {
-      if (!cancelled) id = 'requestVideoFrameCallback' in v ? v.requestVideoFrameCallback(tick) : requestAnimationFrame(tick);
-    };
-    const tick = (now: number) => {
-      schedule();
+    const tick = () => {
       const q = queue.current;
-      if (cancelled || phaseRef.current !== 'running' || !q || now - last < 100 || v.readyState < 2 || !v.videoWidth) return;
+      if (cancelled || phaseRef.current !== 'running' || !q || v.readyState < 2 || !v.videoWidth) return;
       if (q.busy || encoding) { q.dropped++; return; }
-      last = now; encoding = true;
+      encoding = true;
       const generation = epoch.current, config = { ...styleRef.current };
       const ratio = Math.min(1, 256 / Math.max(v.videoWidth, v.videoHeight));
       canvas.width = Math.max(1, Math.round(v.videoWidth * ratio));
@@ -119,8 +122,9 @@ export default function App() {
         if (!cancelled && generation === epoch.current && styleRef.current.revision === config.revision) q.submit(meta, blob);
       }).catch(error => { if (generation === epoch.current) fail(error); }).finally(() => { encoding = false; });
     };
-    schedule();
-    return () => { cancelled = true; if ('cancelVideoFrameCallback' in v) v.cancelVideoFrameCallback(id); else cancelAnimationFrame(id); };
+    const timer = window.setInterval(tick, 100);
+    tick();
+    return () => { cancelled = true; window.clearInterval(timer); };
   }, [phase, fail]);
 
   const update = (part: Partial<StyleConfig>) => {
@@ -154,11 +158,11 @@ export default function App() {
   };
   const active = ['running', 'paused', 'capturing'].includes(phase);
   const changing = ['permission', 'warming', 'capturing'].includes(phase);
-  return <main className="app-shell">
+  return <main className={'app-shell' + (android ? ' android-app' : '')}>
     <header className="topbar"><div className="brand"><Aperture size={34}/><div><p className="eyebrow">FRAME / INK</p><h1>实时漫画相机</h1></div></div><span className={'phase phase-' + phase}><i/>{labels[phase]}</span></header>
     <div className="intro"><h2>让每一帧，留下笔触。</h2><p>原始画面与漫画并排呈现。保持自然光线，静止片刻，拍下一张精修画像。</p></div>
     <div className="mobile-toggle"><button className={mobileView === 'original' ? 'selected' : ''} onClick={() => setMobileView('original')}>原图</button><button className={mobileView === 'cartoon' ? 'selected' : ''} onClick={() => setMobileView('cartoon')}>漫画</button></div>
-    <section className={'view-grid show-' + mobileView}>
+    <section ref={views} className={'view-grid show-' + mobileView}>
       <figure className="original-view"><div className="media-frame"><video ref={video} className={style.mirrored ? 'mirrored' : ''} playsInline muted/>{!active && phase !== 'warming' && <div className="empty"><Camera size={36}/><span>开启相机，画面将在这里出现</span></div>}</div><figcaption><span>01 / 原始画面</span><span>完整画幅 · 无中心裁剪</span></figcaption></figure>
       <figure className="cartoon-view"><div className="media-frame cartoon-frame"><canvas ref={cartoon} className={style.mirrored ? 'mirrored' : ''}/>{!active && <div className="empty"><Aperture size={38}/><span>{phase === 'warming' ? '正在加载本机模型…' : '你的漫画，随画面更新'}</span></div>}</div><figcaption><span>02 / 漫画预览</span><span>{stats.fps > 0 ? stats.fps + ' FPS' : '等待处理'} · MobileNetV3</span></figcaption></figure>
     </section>
@@ -179,7 +183,11 @@ export default function App() {
       <Cell title="已显示 / 跳过帧" value={stats.displayed + ' / ' + stats.dropped}/><Cell title="关键点 / 冷启动" value={stats.faceStatus + (info ? ' / ' + info.coldStartMs.toFixed(0) + ' ms' : '')}/>
     </section>}
     <footer><span><i className="local-dot"/>画面在本机处理</span><span>256 实时预览 · {android ? '384 栅格成片 · Android' : `384 样条精修 · ${isTauri() ? 'Tauri 桌面' : '本机开发模式'}`}</span></footer>
-    {still && <div className="modal" role="dialog" aria-label="精修结果"><div className="still-card"><button className="close" aria-label="关闭精修结果" onClick={() => setStill(null)}><X/></button><h2>这一帧，已成画。</h2><img src={still.url} alt="当前冻结原帧生成的精修漫画"/><button className="primary" onClick={() => { void savePng(still.blob).then(path => setMessage('已保存：' + path)).catch(fail); }}><Download/>保存 PNG</button><p>已按拍照时的镜像设置处理方向。</p></div></div>}
+    {still && <div ref={resultPanel} className="modal" role="dialog" aria-label="精修结果"><div className="still-card"><button className="close" aria-label="关闭精修结果" onClick={() => setStill(null)}><X/></button><h2>这一帧，已成画。</h2><img src={still.url} alt="当前冻结原帧生成的精修漫画"/><div className="result-actions"><button className="primary" onClick={() => { void savePng(still.blob).then(path => setMessage('已保存：' + path)).catch(fail); }}><Download/>保存 PNG</button><button onClick={() => {
+      setStill(null);
+      if (phaseRef.current === 'paused') void pause();
+      views.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }}><Camera/>返回相机</button></div><p>已按拍照时的镜像设置处理方向。</p></div></div>}
   </main>;
 }
 function Cell({ title, value }: { title: string; value: string }) { return <div><b>{title}</b><span>{value}</span></div>; }

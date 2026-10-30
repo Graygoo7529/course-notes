@@ -2,7 +2,7 @@
   "name": "realtime-cartoon-camera",
   "private": true,
   "type": "module",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Tauri 2 + React real-time CNN guided cartoon camera",
   "scripts": {
     "dev": "vite --config apps/desktop/vite.config.ts",

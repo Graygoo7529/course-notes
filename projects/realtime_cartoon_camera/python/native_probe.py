@@ -15,7 +15,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("action", choices=["prepare", "compare"])
     parser.add_argument("--size", type=int, choices=[256, 384], default=256)
-    parser.add_argument("--input", type=Path, default=CORE / "data/input/selfie.png")
+    parser.add_argument("--input", type=Path, default=CORE / "data/input/grace_hopper.jpg")
     parser.add_argument("--directory", type=Path)
     args = parser.parse_args()
     directory = args.directory or APP / f".cache/native_probe_{args.size}"

@@ -185,7 +185,7 @@ def main(argv: list[str] | None = None) -> int:
         demo_truth = None
         if args.demo:
             image, demo_truth, rect = make_demo()
-            metadata["source"] = "synthetic demo; not a selfie or an effect-quality benchmark"
+            metadata["source"] = "synthetic demo; not a portrait-quality benchmark"
             selection = Selection(rect=rect, iterations=args.iterations)
         else:
             image = read_image(args.input)

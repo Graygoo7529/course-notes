@@ -29,32 +29,23 @@ def signature(value) -> str:
 
 
 def demo_inputs() -> tuple[list[Path], dict]:
+    """Return the public Matplotlib portrait used for reproducible demos."""
     import matplotlib
+
     folder = ROOT / "data/input"
     folder.mkdir(parents=True, exist_ok=True)
-    old = ROOT.parent / "cnn_cartoon_portrait_v2/outputs/selfie-v2/input.png"
-    notes = {}
-    paths = []
-    if old.is_file():
-        path = folder / "selfie.png"
-        if not path.exists():
-            save_image(path, read_image(old))
-        paths.append(path)
-        notes[path.stem] = {"label": "本地人像 · 正脸与眼镜", "source_note": "复用旧项目 150×197 本地照片；放大只用于画布统一，不恢复原图细节。"}
-        dark = folder / "selfie_dim.png"
-        if not dark.exists():
-            save_image(dark, np.rint(read_image(path).astype(float) * 0.30).astype(np.uint8))
-        notes[dark.stem] = {"label": "同图暗光派生 · 压力检查", "source_note": "由本地人像 RGB 乘 0.30 生成的暗光派生图；不是新增人物或真实暗光采集。"}
     grace = folder / "grace_hopper.jpg"
     if not grace.exists():
         source = Path(matplotlib.get_data_path()) / "sample_data/grace_hopper.jpg"
         grace.write_bytes(source.read_bytes())
-    paths.append(grace)
-    notes[grace.stem] = {"label": "公开示例 · 眼镜与复杂背景", "source_note": "Matplotlib 随包 grace_hopper.jpg 示例照片（512×600）；保留原背景，未做人物分割。"}
-    if old.is_file():
-        paths.append(folder / "selfie_dim.png")
+    notes = {
+        grace.stem: {
+            "label": "公开示例 · 眼镜与复杂背景",
+            "source_note": "Matplotlib 随包 grace_hopper.jpg 示例照片（512×600）；保留原背景，未做人物分割。",
+        }
+    }
     write_json(folder / "sources.json", notes)
-    return paths, notes
+    return [grace], notes
 
 
 def cache_prepared(folder: Path, item: Prepared, key: str) -> None:

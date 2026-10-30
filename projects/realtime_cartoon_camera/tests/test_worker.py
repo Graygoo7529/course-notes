@@ -16,7 +16,7 @@ from websockets.typing import Origin
 
 ROOT = Path(__file__).resolve().parents[1]
 PYTHON = os.environ.get("CARTOON_PYTHON", r"C:\Anaconda3\envs\d2l\python.exe")
-INPUT = ROOT.parent / "cnn_face_cartoon/data/input/selfie.png"
+INPUT = ROOT.parent / "cnn_face_cartoon/data/input/grace_hopper.jpg"
 
 
 def packet(meta: dict, payload: bytes) -> bytes:
@@ -33,9 +33,11 @@ def unpack(value: bytes) -> tuple[dict, bytes]:
 class WorkerProtocolTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.original = INPUT.read_bytes()
         with Image.open(INPUT) as source:
             cls.source_size = source.size
+            original = io.BytesIO()
+            source.convert("RGB").save(original, format="PNG")
+            cls.original = original.getvalue()
             preview = source.convert("RGB")
             preview.thumbnail((256, 256))
             buffer = io.BytesIO()

@@ -4,6 +4,7 @@ dist-android/
 target/
 .vite/
 .cache/
+docs/assets/
 data/
 models/
 *.onnx
@@ -19,7 +20,6 @@ apps/desktop/src-tauri/gen/schemas/
 __pycache__/
 .pytest_cache/
 build/
-!docs/assets/*.png
 !apps/desktop/src-tauri/icons/*.png
 .gradle/
 local.properties

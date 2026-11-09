@@ -1,0 +1,19 @@
+# Reuse torch and torchvision from the active d2l environment.
+# CUDA wheels are selected separately; see docs/环境与模型准备.md.
+# These are preparation constraints, not a tested dependency lock.
+fastapi>=0.115,<1
+uvicorn>=0.30,<1
+websockets>=13
+numpy>=1.26
+opencv-contrib-python>=4.10
+Pillow>=10
+scipy>=1.11
+PyYAML>=6
+requests>=2.31
+tqdm>=4.66
+matplotlib>=3.8
+pandas>=2
+seaborn>=0.13
+scikit-image>=0.24
+gdown>=5,<6
+ty

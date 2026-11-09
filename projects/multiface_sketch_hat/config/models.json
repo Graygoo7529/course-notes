@@ -1,0 +1,44 @@
+{
+  "reviewed_at": "2026-11-06",
+  "status": "Upstream source links reviewed; weights not downloaded or loaded.",
+  "models": [
+    {
+      "id": "yolov5s_face",
+      "role": "required_detector",
+      "repository": "https://github.com/deepcam-cn/yolov5-face",
+      "source_dir": "third_party/yolov5-face",
+      "download_url": "https://drive.google.com/file/d/1zxaHeLDyID9YU4-hqK7KNepXIwbTkRIO/view",
+      "file": "model/yolov5_face/yolov5s-face.pt",
+      "input_size": 640,
+      "sha256": null
+    },
+    {
+      "id": "informative_drawings",
+      "role": "sketch_candidate",
+      "repository": "https://github.com/carolineec/informative-drawings",
+      "source_dir": "third_party/informative-drawings",
+      "download_url": "https://drive.google.com/file/d/1MIdHzecxz-z0uY3ARL_R40DlKcuQxiDk/view",
+      "archive": "model/informative_drawings/model.zip",
+      "file_glob": "model/informative_drawings/**/netG_A_latest.pth",
+      "input_size": 256,
+      "residual_blocks": 3,
+      "sha256": null
+    },
+    {
+      "id": "u2net_portrait",
+      "role": "sketch_candidate",
+      "repository": "https://github.com/xuebinqin/U-2-Net",
+      "source_dir": "third_party/U-2-Net",
+      "download_url": "https://drive.google.com/file/d/1IG3HdpcRiDoWNookbncQjeaPN28t90yW/view",
+      "file": "model/u2net_portrait/u2net_portrait.pth",
+      "input_size": 512,
+      "sha256": null
+    }
+  ],
+  "optional_geometry": {
+    "id": "face_landmarker",
+    "local_source": "../cnn_face_cartoon/model/face_landmarker.task",
+    "file": "model/geometry/face_landmarker.task",
+    "purpose": "Optional dense landmarks and facial transformation; not a replacement for YOLO detection."
+  }
+}

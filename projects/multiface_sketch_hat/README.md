@@ -2,7 +2,7 @@
 
 深度学习应用作业：浏览器获取摄像头画面，使用 YOLOv5s-Face 检测多人，为各人生成素描，再按头部位置、尺度和倾斜佩戴二维帽子。
 
-**当前阶段：项目骨架与安装准备。尚未接入摄像头、加载权重或完成推理测速。**
+**当前阶段：离线核心算法与 Web 摄像头闭环均已打通，后续可继续做性能与视觉细化。**
 
 ## 路线
 
@@ -17,15 +17,39 @@ flowchart LR
     F --> G[多人画面与个人卡片]
 ```
 
-主线为 React + TypeScript + Vite、FastAPI 本机服务、PyTorch 推理。先比较 Informative Drawings 与 U²-Net Portrait，再选择一个主生成器。沿用原技术路线，不训练或微调，不把普通 YOLO COCO 权重当成人脸检测器。
+主线为 React + TypeScript + Vite、FastAPI 本机服务、PyTorch 推理。当前已确定 Informative Drawings 的 `anime_style`（Lineart fine）作为主素描生成器；Canny/XDoG 保留在原实验包中作为后续对照，当前 API 使用 Lineart fine；U²-Net Portrait 暂作可选遮罩候选。沿用原技术路线，不训练或微调，不把普通 YOLO COCO 权重当成人脸检测器。
 
-从 [环境与模型准备](docs/环境与模型准备.md) 开始安装；[方案评审](docs/方案评审.md) 记录可行性与实施边界。原始设计位于仓库的 `references/多人素描与虚拟戴帽技术路线.md`，未修改。
+从 [环境与模型准备](docs/环境与模型准备.md) 开始安装；[方案评审](docs/方案评审.md) 记录可行性与实施边界。核心算法可用下面的命令运行。原始设计位于仓库的 `references/多人素描与虚拟戴帽技术路线.md`，未修改。
+
+```powershell
+conda activate d2l
+python scripts/run_core_demo.py --scene-size 512 --cards
+```
+
+输出保存在被忽略的 `outputs/core_demo/`：检测框、整帧线稿、淡彩帽子场景和逐人卡片。示例输入为公开的 `data/input/grace_hopper.jpg`。
+
+## 启动 Web 摄像头
+
+先在一个终端启动后端（首次启动会加载本地模型）：
+
+```powershell
+conda activate d2l
+python -m uvicorn backend.app.api.main:app --host 127.0.0.1 --port 8000
+```
+
+再在另一个终端启动前端：
+
+```powershell
+npm.cmd --prefix frontend run dev
+```
+
+打开 Vite 输出的本地地址（通常为 `http://127.0.0.1:5173`），允许浏览器访问摄像头即可看到整帧多人素描。点击“拍摄逐人卡片”会基于同一帧生成各人头像卡片。前端以约 450 ms 的节奏发送 JPEG 帧；后端返回带 `frameId`、检测框、五点坐标和 `trackId` 的二进制响应。
 
 ## 目录
 
 ```text
-backend/                 Python 服务及算法模块（待实现）
-  app/                   API、检测、生成、跟踪、几何和合成的落点
+backend/                 Python 服务及算法模块
+  app/                   第一阶段检测、生成、几何和合成；第二阶段 API/跟踪
 frontend/                React / TypeScript / Vite 最小页面
 assets/hats/             可提交的帽子素材、锚点与来源说明
 config/models.json       官方模型来源与预期文件位置
@@ -39,14 +63,14 @@ outputs/                 对照图、导出成片，整体忽略
 .cache/                  环境快照和测试截图，整体忽略
 ```
 
-默认用 `conda activate d2l`。`requirements.txt` 不主动替换现有 torch/torchvision；GPU 选项单独列在安装说明。前端安装后可启动初始化页，但此时没有相机和算法功能。
+默认用 `conda activate d2l`。`requirements.txt` 不主动替换现有 torch/torchvision；GPU 选项单独列在安装说明。模型在后端启动时加载，浏览器只负责摄像头取帧、场景显示和拍照卡片展示。
 
 ## 实施顺序
 
-1. 核对依赖与三个权重：人脸检测、两种候选素描生成器。
-2. 用公开示例图生成对照板，选择素描主模型；单人通过后再测 2／4 人。
-3. 打通单图人脸检测、裁剪、素描、帽子定位及个人卡片。
-4. 接入摄像头，完成逐人 ID、几何平滑、单帧在途和冻结拍照。
-5. 增加帽子前后层与遮罩，完善多人合成和导出。
+1. 已完成模型准备与离线核心流程：YOLOv5-Face、Lineart fine、淡彩帽子和逐人卡片。
+2. 用公开示例图和有来源的多人图检查检测、裁剪、线稿与帽子层次。
+3. 接入摄像头，完成逐人 ID、几何平滑、单帧在途和冻结拍照。
+4. 将整帧场景作为 Web 主视图，拍摄时生成同一帧的逐人卡片。
+5. 再根据 GPU/CPU 测速结果决定批处理、刷新率和是否启用 U²-Net 遮罩。
 
 演示输入默认使用已有公开示例 `../cnn_face_cartoon/data/input/grace_hopper.jpg` 的本地副本。多人测试后续使用有来源的公开图片或生成素材；复制同一个头像只能检查多框与调度，不能证明不同人物的关联稳定性。摄像头帧与测试截图不进入文档资源目录。

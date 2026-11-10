@@ -1,1 +1,1 @@
-"""HTTP and WebSocket entry points (implementation pending)."""
+"""FastAPI and WebSocket entry points for the browser camera stage."""

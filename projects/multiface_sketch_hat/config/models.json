@@ -1,38 +1,46 @@
 {
-  "reviewed_at": "2026-11-06",
-  "status": "Upstream source links reviewed; weights not downloaded or loaded.",
+  "reviewed_at": "2026-11-09",
+  "status": "Weights downloaded; YOLOv5-Face and Lineart fine verified in the first-stage CPU smoke run.",
   "models": [
     {
       "id": "yolov5s_face",
       "role": "required_detector",
       "repository": "https://github.com/deepcam-cn/yolov5-face",
       "source_dir": "third_party/yolov5-face",
+      "source_required": true,
       "download_url": "https://drive.google.com/file/d/1zxaHeLDyID9YU4-hqK7KNepXIwbTkRIO/view",
       "file": "model/yolov5_face/yolov5s-face.pt",
       "input_size": 640,
-      "sha256": null
+      "sha256": "a594ade0f5e80f5cf15aef8997d285a3fb4b372a2af5262fbc6837d30318cda7"
     },
     {
       "id": "informative_drawings",
       "role": "sketch_candidate",
       "repository": "https://github.com/carolineec/informative-drawings",
       "source_dir": "third_party/informative-drawings",
+      "source_required": false,
       "download_url": "https://drive.google.com/file/d/1MIdHzecxz-z0uY3ARL_R40DlKcuQxiDk/view",
       "archive": "model/informative_drawings/model.zip",
-      "file_glob": "model/informative_drawings/**/netG_A_latest.pth",
+      "primary_style": "anime_style",
+      "primary_file": "model/informative_drawings/model/anime_style/netG_A_latest.pth",
+      "optional_style_files": {
+        "opensketch_style": "model/informative_drawings/model/opensketch_style/netG_A_latest.pth",
+        "contour_style": "model/informative_drawings/model/contour_style/netG_A_latest.pth"
+      },
       "input_size": 256,
       "residual_blocks": 3,
-      "sha256": null
+      "sha256": "c686ced2a666b4850b4bb6ccf0748031c3eda9f822de73a34b8979970d90f0c6"
     },
     {
       "id": "u2net_portrait",
       "role": "sketch_candidate",
       "repository": "https://github.com/xuebinqin/U-2-Net",
       "source_dir": "third_party/U-2-Net",
+      "source_required": false,
       "download_url": "https://drive.google.com/file/d/1IG3HdpcRiDoWNookbncQjeaPN28t90yW/view",
       "file": "model/u2net_portrait/u2net_portrait.pth",
       "input_size": 512,
-      "sha256": null
+      "sha256": "fb9f0378a16868d08e2325c8b36eae2b174b040b91bf64781fbb5dd4d31712b4"
     }
   ],
   "optional_geometry": {

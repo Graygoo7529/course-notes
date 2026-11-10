@@ -80,9 +80,15 @@ def inspect() -> dict[str, Any]:
     manifest = json.loads((ROOT / "config/models.json").read_text(encoding="utf-8"))
     models = []
     for entry in manifest["models"]:
-        paths = sorted(ROOT.glob(entry["file_glob"])) if "file_glob" in entry else [ROOT / entry["file"]]
+        if "file_glob" in entry:
+            paths = sorted(ROOT.glob(entry["file_glob"]))
+        elif "file" in entry:
+            paths = [ROOT / entry["file"]]
+        else:
+            paths = [ROOT / entry["primary_file"]]
         models.append({
             "id": entry["id"],
+            "source_required": entry.get("source_required", True),
             "source_present": (ROOT / entry["source_dir"]).is_dir(),
             "files": [describe_weight(path) for path in paths if path.is_file()],
         })
@@ -109,7 +115,7 @@ def main() -> int:
     incomplete = "MISSING" in report["packages"].values() or "error" in report["runtime"]
     if args.require_models:
         incomplete |= any(
-            not entry["source_present"] or not entry["files"]
+            (entry.get("source_required", True) and not entry["source_present"]) or not entry["files"]
             or any(item["bytes"] == 0 or item["looks_like_error_page"] for item in entry["files"])
             for entry in report["models"]
         )

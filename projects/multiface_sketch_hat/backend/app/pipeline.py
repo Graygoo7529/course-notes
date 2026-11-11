@@ -7,6 +7,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+import torch
 
 from .compositing.hats import HAT_STYLES, HatStyle, overlay_hats
 from .detectors.yolov5_face import YoloV5FaceDetector
@@ -47,7 +48,18 @@ class CorePipeline:
         weights = root / "model" / "yolov5_face" / "yolov5s-face.pt"
         detector = YoloV5FaceDetector(weights, source, device=device, trust_checkpoint=True)
         sketcher = LineartSketcher(root / "model" / "informative_drawings", style="anime_style", device=device)
+        if detector.device.type == "cuda":
+            torch.backends.cudnn.benchmark = True
         return cls(detector, sketcher, scene_max_size=scene_max_size)
+
+    def warmup(self, width: int = 640, height: int = 480) -> None:
+        """Compile CUDA kernels and initialize allocators before the first camera frame."""
+
+        dummy = np.zeros((height, width, 3), dtype=np.uint8)
+        self.detector(dummy)
+        self.sketcher.predict(dummy)
+        if self.detector.device.type == "cuda":
+            torch.cuda.synchronize(self.detector.device)
 
     @staticmethod
     def _to_rgb(sketch: np.ndarray) -> np.ndarray:
@@ -63,12 +75,18 @@ class CorePipeline:
         frame_rgb: np.ndarray,
         detections: list[FaceDetection] | list[TrackedFace],
         make_cards: bool = False,
+        sketch_gray: np.ndarray | None = None,
     ) -> SceneResult:
         frame = validate_rgb(frame_rgb)
         plain_detections = [
             item.detection if isinstance(item, TrackedFace) else item for item in detections
         ]
-        sketch = self.sketcher.predict(frame)
+        if sketch_gray is None:
+            sketch = self.sketcher.predict(frame)
+        else:
+            if sketch_gray.ndim != 2 or sketch_gray.shape != frame.shape[:2] or sketch_gray.dtype != np.uint8:
+                raise ValueError("sketch_gray must be a uint8 grayscale image with the frame shape")
+            sketch = sketch_gray
         sketch_rgb = self._to_rgb(sketch)
         scene = overlay_hats(sketch_rgb, plain_detections, self.hat_style)
         cards: list[np.ndarray] = []

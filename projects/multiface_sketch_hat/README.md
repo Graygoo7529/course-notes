@@ -34,6 +34,7 @@ python scripts/run_core_demo.py --scene-size 512 --cards
 
 ```powershell
 conda activate d2l
+$env:MULTIFACE_DEVICE = "cuda"
 python -m uvicorn backend.app.api.main:app --host 127.0.0.1 --port 8000
 ```
 
@@ -43,7 +44,7 @@ python -m uvicorn backend.app.api.main:app --host 127.0.0.1 --port 8000
 npm.cmd --prefix frontend run dev
 ```
 
-打开 Vite 输出的本地地址（通常为 `http://127.0.0.1:5173`），允许浏览器访问摄像头即可看到整帧多人素描。点击“拍摄逐人卡片”会基于同一帧生成各人头像卡片。前端以约 450 ms 的节奏发送 JPEG 帧；后端返回带 `frameId`、检测框、五点坐标和 `trackId` 的二进制响应。
+打开 Vite 输出的本地地址（通常为 `http://127.0.0.1:5173`），允许浏览器访问摄像头即可看到整帧多人素描。点击“拍摄逐人卡片”会基于同一帧生成各人头像卡片。前端以约 90 ms 的节奏尝试发送 JPEG 帧，并用 in-flight 闸门避免堆积；后端返回带 `frameId`、处理耗时、检测框、五点坐标和 `trackId` 的二进制响应。GPU 可用时保持 640 像素宽度和 Lineart 全质量更新。
 
 ## 目录
 
@@ -71,6 +72,6 @@ outputs/                 对照图、导出成片，整体忽略
 2. 用公开示例图和有来源的多人图检查检测、裁剪、线稿与帽子层次。
 3. 接入摄像头，完成逐人 ID、几何平滑、单帧在途和冻结拍照。
 4. 将整帧场景作为 Web 主视图，拍摄时生成同一帧的逐人卡片。
-5. 再根据 GPU/CPU 测速结果决定批处理、刷新率和是否启用 U²-Net 遮罩。
+5. 已根据 GPU 测速结果启用高频摄像头发帧；CPU 回退时可用 `MULTIFACE_SKETCH_INTERVAL_MS` 缓存素描结果。
 
 演示输入默认使用已有公开示例 `../cnn_face_cartoon/data/input/grace_hopper.jpg` 的本地副本。多人测试后续使用有来源的公开图片或生成素材；复制同一个头像只能检查多框与调度，不能证明不同人物的关联稳定性。摄像头帧与测试截图不进入文档资源目录。

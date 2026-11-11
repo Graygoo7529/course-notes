@@ -61,10 +61,11 @@ def inspect() -> dict[str, Any]:
     try:
         torch = importlib.import_module("torch")
         torchvision = importlib.import_module("torchvision")
+        torch_version = importlib.import_module("torch.version")
         available = torch.cuda.is_available()
         device = "cuda" if available else "cpu"
         runtime.update(torch=torch.__version__, torchvision=torchvision.__version__,
-                       cuda_build=torch.version.cuda, cuda_available=available, device=device)
+                       cuda_build=torch_version.cuda, cuda_available=available, device=device)
         if available:
             runtime["gpu"] = torch.cuda.get_device_name(0)
         # This exercises the selected device and torchvision's compiled NMS operator.

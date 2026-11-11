@@ -13,11 +13,14 @@ type SceneHeader = {
   frameId: number;
   width: number;
   height: number;
+  processingMs?: number;
+  sketchUpdated?: boolean;
   detections: Detection[];
   cards: string[];
 };
 
 const API_HOST = '127.0.0.1:8000';
+const FRAME_INTERVAL_MS = 90;
 
 function readBinaryResponse(buffer: ArrayBuffer): { header: SceneHeader; jpeg: Blob } {
   const view = new DataView(buffer);
@@ -97,11 +100,17 @@ function App() {
           setCards(header.cards.map((item) => `data:image/jpeg;base64,${item}`));
           setStatus(`\u5df2\u4ece\u7b2c ${header.frameId} \u5e27\u751f\u6210 ${header.cards.length} \u5f20\u9010\u4eba\u5361\u7247`);
         } else {
-          setStatus(`\u5b9e\u65f6\u5904\u7406\u4e2d \u00b7 \u7b2c ${header.frameId} \u5e27 \u00b7 ${header.detections.length} \u5f20\u8138`);
+          const timing = header.processingMs === undefined ? '' : ` \u00b7 ${header.processingMs} ms`;
+          setStatus(`\u5b9e\u65f6\u5904\u7406\u4e2d \u00b7 \u7b2c ${header.frameId} \u5e27 \u00b7 ${header.detections.length} \u5f20\u8138${timing}`);
         }
         inFlightRef.current = false;
       };
-      socket.onclose = () => setRunning(false);
+      socket.onclose = () => {
+        if (timerRef.current !== null) window.clearInterval(timerRef.current);
+        timerRef.current = null;
+        inFlightRef.current = false;
+        setRunning(false);
+      };
       await new Promise<void>((resolve, reject) => {
         socket.onopen = () => resolve();
         socket.onerror = () => reject(new Error('websocket'));
@@ -118,7 +127,7 @@ function App() {
       await videoRef.current.play();
       setRunning(true);
       setStatus('\u5b9e\u65f6\u5904\u7406\u4e2d');
-      timerRef.current = window.setInterval(() => void sendFrame(), 450);
+      timerRef.current = window.setInterval(() => void sendFrame(), FRAME_INTERVAL_MS);
       void sendFrame();
     } catch (error) {
       const message = error instanceof DOMException && error.name === 'NotAllowedError'

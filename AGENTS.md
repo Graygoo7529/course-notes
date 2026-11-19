@@ -36,7 +36,7 @@
 
 ## 编码环境
 
-代码运行和开发环境  `conda activate d2l`
+代码运行和开发环境  `uv`
 编码风格检查：`python -m ty check`
 
 

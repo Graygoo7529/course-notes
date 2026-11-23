@@ -1,0 +1,94 @@
+{
+  "target_claim": {
+    "primary_source": "X 账号 @RealBababanaras（2026-08-26 连发帖）及跟风搬运矩阵",
+    "post_1_time_bjt": "2026-08-26 18:41 (10:41 UTC，灾后约 7 小时 49 分钟)",
+    "post_1_quote": "Nepal after flash floods reportedly originating from Tibet, following the collapse of a Chinese dam.",
+    "post_2_time_bjt": "2026-08-26 19:09 (11:09 UTC，首帖后 28 分钟)",
+    "post_2_quote": "This flooding is reported to have occurred after the collapse of a Chinese dam in Tibet, 291 foreign tourists are missing, including 105 Indians, 38 US citizens...",
+    "overall_verdict": "虚假 / 具有严重误导性（False / Severely Misleading）"
+  },
+  "atomic_claims": [
+    {
+      "id": "C1",
+      "dimension": "视觉影像与空间归属",
+      "claim_text": "配发视频展示“中国大坝溃坝后冲毁尼泊尔”的现场",
+      "rating": "移花接木 / 剥离语境（Misattributed Context）",
+      "summary": "视频画面本身系真实灾情，但源自中方吉隆出入境边防检查站发布的吉隆口岸受灾监控；传播者抹去时间水印、替换音频，将下游口岸受灾画面冒充为“大坝溃决证据”。同期另有衍生帖盗用 2025 年印度洪灾旧视频。"
+    },
+    {
+      "id": "C2",
+      "dimension": "人员失联统计口径",
+      "claim_text": "大坝溃坝导致 291 名外国游客失联（含 105 名印度人、38 名美国人）",
+      "rating": "数据嫁接与局部夸大（Conflated & Inflated）",
+      "summary": "“291 名外籍人员”出自尼泊尔旅游局（NTB）灾后初期发布的 384 人暂时失联通信排查名单（291 外籍 + 93 尼泊尔籍），属于断网状态下的待联络统计而非确认遇难人数；后续大批游客恢复联络或获直升机转运。帖文将自然灾害失联名单强行绑定至“溃坝”，并夸大错配了美籍人数（38 人）。"
+    },
+    {
+      "id": "C3",
+      "dimension": "核心致灾物理成因",
+      "claim_text": "山洪泥石流由西藏一侧中国大坝垮塌（或构造地震）引发",
+      "rating": "完全虚假（False）",
+      "summary": "USGS 地球物理监测与 ICIMOD 卫星遥感独立证实：灾害起动于尼泊尔境内朗塘里荣峰北坡（海拔约 5,200 米）约 1.32 亿立方米冰岩混合崩塌；沿线水电设施（如 111 MW Rasuwagadhi 电站及吉隆口岸小水电）均为无大型蓄水库容的径流引水式电站，它们是被泥石流重创的受灾体而非致灾源。"
+    }
+  ],
+  "primary_sources": [
+    {
+      "source_id": "E1_USGS",
+      "agency": "美国地质调查局（USGS）",
+      "evidence_tier": "Tier 1 · 一手地球物理台网监测",
+      "key_parameters": {
+        "utc_time": "2026-08-26 02:52:10 UTC（北京时间 10:52:10）",
+        "coordinates": "28.271°N, 85.515°E（尼泊尔境内朗塘里荣峰/伦德河上游）",
+        "depth_km": 0.0,
+        "classification": "等效 M5.2 滑坡/冰岩崩塌事件（初期自动速报曾暂标 M4.4 地震，经长周期波形重分析更正为地表质量崩塌）"
+      },
+      "verification_role": "提供精确到秒的灾害物理零点 t0，证明震源位于尼泊尔高海拔冰川带且深度为 0 km，同时证伪“西藏大坝源头说”与“构造地震致洪说”。"
+    },
+    {
+      "source_id": "E2_ICIMOD",
+      "agency": "国际山地综合开发中心（ICIMOD）",
+      "report_title": "Understanding the Gyirong–Rasuwa disaster of 26 August 2026: A preliminary synthesis",
+      "evidence_tier": "Tier 1 · 卫星遥感与冰冻圈科学调查",
+      "key_parameters": {
+        "source_zone": "尼泊尔朗塘里荣峰（Langtang Lirung）北翼，起动海拔约 5,200 m",
+        "collapse_volume": "约 1.32 亿立方米（132 million m³）基岩与冰川冰混合崩落",
+        "insar_precursor": "Sentinel-1 雷达干涉显示灾前（2026-07-07 至 08-24）斜坡已有最高约 40 cm 视线向渐进形变",
+        "hazard_mechanism": "崩塌体坠入伦德河（Lhende Kholā）短暂堵江后溃决，形成时速超 160 km/h（100 mph）泥石流山洪，非传统冰湖溃决（GLOF）"
+      },
+      "verification_role": "从灾前形变前兆、物质体积到河谷演进路径给出完整物理闭环，彻底排除人为溃坝成因。"
+    },
+    {
+      "source_id": "E3_NTB_NDRRMA",
+      "agency": "尼泊尔国家减灾管理局（NDRRMA）与尼泊尔旅游局（NTB）",
+      "evidence_tier": "Tier 2 · 当事国应急主管部门官方通报",
+      "key_parameters": {
+        "initial_tally": "灾后初期因道路通信中断，共登记 384 名旅客失联（291 名外国公民 + 93 名尼泊尔公民）",
+        "traveler_profile": "包含前往冈仁波齐朝圣的印度香客（初报 105 人）及多国徒步游客；随通信抢通与军方空运救援，大批失联人员陆续获救核销"
+      },
+      "verification_role": "还原“291”这一真实数字的原始行政语境，揭示谣言如何将“断网初期待核实名单”偷换为“溃坝致死伤后果”。"
+    },
+    {
+      "source_id": "E4_HYDRO_OSINT",
+      "agency": "流域水电工程参数与中尼边境口岸公开记录",
+      "evidence_tier": "Tier 1/2 · 工程物理约束与现场监控溯源",
+      "key_parameters": {
+        "plant_types": "走廊内 111 MW Rasuwagadhi 水电站、Chilime、Trishuli-3A 及吉隆口岸配套小水电均为径流引水式电站（run-of-the-river / diversion-type）",
+        "storage_constraint": "仅设低矮拦河引水闸，无大型蓄水库容，物理上不具备制造亿方级跨境山洪的蓄水条件",
+        "actual_damage": "Rasuwagadhi 电站刚于 2026 年中从 2025 年洪灾修复投产，本次再遭泥石流灌入地下厂房损毁；吉隆口岸联检设施被淹，其官方受灾监控即被盗用视频之母本"
+      },
+      "verification_role": "从流体体积守恒与上下游高程关系双重证伪“大坝溃坝”，证明水电设施是下游受害者而非上游肇事源。"
+    }
+  ],
+  "elevation_corridor": [
+    {"stage": "1. 崩塌源区", "name": "朗塘里荣峰北坡（尼泊尔境内）", "elevation_m": 5200, "distance_km": 0, "role": "1.32 亿 m³ 冰岩失稳崩落（USGS 28.271°N, 85.515°E）"},
+    {"stage": "2. 堵江转化段", "name": "伦德河谷上游（Lhende Kholā）", "elevation_m": 3200, "distance_km": 8, "role": "崩塌体坠谷短暂堵江后溃决，转化为超高速泥石流"},
+    {"stage": "3. 跨境冲击段", "name": "吉隆口岸 / Rasuwagadhi 枢纽", "elevation_m": 1850, "distance_km": 22, "role": "口岸监控拍摄点（视频真身）；111 MW 径流式电站地下厂房被淹"},
+    {"stage": "4. 下游演进段", "name": "Bhote Koshi — Trishuli 河谷", "elevation_m": 1100, "distance_km": 48, "role": "冲击 Rasuwa、Nuwakot 沿线桥梁、公路与电网变电站"}
+  ],
+  "craap_assessment": [
+    {"criterion": "时效性（Currency）", "rumor_account": "灾后约 7.8 小时抢发，利用断网真空期抢占首因效应，未随官方勘测更新更正", "score": "低（抢跑失实）"},
+    {"criterion": "相关性（Relevance）", "rumor_account": "强行将口岸受灾视频与无关的地缘基础设施议题捆绑", "score": "误导性关联"},
+    {"criterion": "权威性（Authority）", "rumor_account": "非现场记者、非水文地质机构，无任何一手勘测资质", "score": "极低"},
+    {"criterion": "准确性（Accuracy）", "rumor_account": "仅凭模糊词 reportedly 立论，去水印抹除视频出处，错配夸大国籍数字", "score": "极低（核心归因证伪）"},
+    {"criterion": "目的性（Purpose）", "rumor_account": "利用涉多国游客数字与地缘敏感标签激发愤怒与恐慌，博取跨国高互动流量", "score": "操纵性议程设置"}
+  ]
+}

@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+.venv/
+venv/
+
+# Local raw & intermediate data (keep folder structure via .gitkeep)
+/data/raw/*
+!/data/raw/.gitkeep
+/data/processed/*
+!/data/processed/.gitkeep
+
+# Caches & tools
+.cache/
+.tools/
+*.log

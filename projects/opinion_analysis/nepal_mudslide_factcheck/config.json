@@ -1,0 +1,59 @@
+{
+  "event": {
+    "name": "2026 年 8 月 26 日中尼边境（朗塘里荣峰—吉隆/拉苏瓦）冰岩崩塌泥石流灾害",
+    "t0_utc": "2026-08-26T02:52:10Z",
+    "t0_beijing": "2026-08-26T10:52:10+08:00",
+    "t0_nepal": "2026-08-26T08:37:10+05:45",
+    "window_start_utc": "2026-08-26T00:00:00Z",
+    "window_end_utc": "2026-08-30T00:00:00Z",
+    "info_void_hours": 24,
+    "bin_hours": 6
+  },
+  "queries": {
+    "base": "(\"Nepal\" OR \"Tibet\" OR \"Xizang\" OR \"Gyirong\" OR \"Rasuwa\" OR \"Rasuwagadhi\" OR \"Lhende\") (\"flood\" OR \"floods\" OR \"mudslide\" OR \"landslide\" OR \"debris flow\")",
+    "subqueries": {
+      "T1_dam_rumor": "(\"dam collapse\" OR \"Chinese dam\" OR \"dam burst\" OR \"dam break\")",
+      "T2_seismic_misread": "(\"earthquake\" OR \"seismic\" OR \"M4.4\" OR \"M5.2\" OR \"tremor\")",
+      "T3_glacier_science": "(\"glacier\" OR \"glacial\" OR \"ice-rock\" OR \"avalanche\" OR \"Langtang\")",
+      "T4_official_supply": "(\"USGS\" OR \"NDRRMA\" OR \"ICIMOD\" OR \"Nepal Tourism Board\" OR \"Ministry\")"
+    }
+  },
+  "slots": [
+    {
+      "id": "chinese_dam",
+      "label": "虚构大坝溃坝归因",
+      "patterns": ["chinese dam", "dam collapse", "collapse of a chinese dam", "dam burst", "dam in tibet"]
+    },
+    {
+      "id": "tibet_origin",
+      "label": "声称洪水源自西藏水库",
+      "patterns": ["originating from tibet", "from tibet", "dam in tibet"]
+    },
+    {
+      "id": "hedging_reportedly",
+      "label": "免责模糊词（reportedly）",
+      "patterns": ["reportedly", "is reported to", "unconfirmed reports"]
+    },
+    {
+      "id": "tourists_291",
+      "label": "291 名外国游客失联槽位",
+      "patterns": ["291 foreign", "291 tourists", "291"]
+    },
+    {
+      "id": "indians_105",
+      "label": "105 名印度公民数字槽位",
+      "patterns": ["105 indians", "105 indian"]
+    },
+    {
+      "id": "us_38_inflated",
+      "label": "38 名美国公民（夸大/错配槽位）",
+      "patterns": ["38 us", "38 americans", "38 u.s."]
+    }
+  ],
+  "metrics": {
+    "deficit_epsilon": 0.05,
+    "cooccurrence_tau_hours": 6.0,
+    "cooccurrence_min_shared_slots": 2,
+    "cooccurrence_min_weight": 0.25
+  }
+}

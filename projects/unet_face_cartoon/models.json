@@ -1,0 +1,21 @@
+{
+  "unet": {
+    "filename": "unet/model.pth",
+    "url": "https://drive.google.com/uc?id=1o1m-eT38zNCIFldcRaoWcLvvBtY8S4W3",
+    "source": "https://github.com/switchablenorms/CelebAMask-HQ/blob/3f6c45df5e67130568f9459f24f8d6a5ff836d30/face_parsing/README.md",
+    "sha256": "7914f1dccb37ab2f307703f2593efd74cc327d9db974424dff8d7510b46d85b5"
+  },
+  "photo2cartoon-bundle": {
+    "filename": "downloads/photo2cartoon_resources_20200504.zip",
+    "url": "https://drive.google.com/uc?id=1lsQS8hOCquMFKJFhK_z-n03ixWGkjT2P",
+    "source": "https://github.com/minivision-ai/photo2cartoon/blob/6204e27a71620500c2f5b2ffd36646b0e2e5c110/README.md",
+    "sha256": "1e1f9143828ff97a912104a9bea0efcea2cc3e5d2fe0631033892a088fd21740",
+    "generator_sha256": "e08c84ea4c62251c6157dbf1d3ef44d2549d6aa8c9ee72ec9e4b3089ce5d5f0f"
+  },
+  "photo2cartoon-onnx": {
+    "filename": "photo2cartoon/photo2cartoon_weights.onnx",
+    "url": "https://drive.google.com/uc?id=1PhwKDUhiq8p-UqrfHCqj257QnqBWD523",
+    "source": "https://github.com/minivision-ai/photo2cartoon/blob/6204e27a71620500c2f5b2ffd36646b0e2e5c110/README.md",
+    "sha256": "542914cb8580cb733c7e914d22cc24ddabbbb207516d74ffc793f2a1b6c3eeb3"
+  }
+}

@@ -36,8 +36,13 @@
 
 ## 编码环境
 
-代码运行和开发环境  `uv`
-编码风格检查：`python -m ty check`
+- 新项目使用 `uv`，在各自的 `projects/<项目名>/` 下维护 `pyproject.toml`、`.python-version` 和 `uv.lock`，环境隔离到项目内 `.venv`。
+- 在项目目录执行 `uv sync --locked` 安装锁定依赖，使用 `uv run python ...` 运行；不依赖系统 `python`、旧电脑的绝对路径或已激活的 Conda 环境。
+- 类型检查：`uv run python -m ty check`（即在项目环境内执行 `python -m ty check`）；测试命令遵循项目 README。
+- GPU 项目先检查显卡、驱动与 PyTorch CUDA 构建的兼容性，再做实际张量运算验证；不以 `nvidia-smi` 能显示显卡代替推理验证。
+- 新电脑的工具位置可参考 Shared 的 `local-dev/python-uv.md`；Shared 只提供环境提示，不替代项目依赖声明。不自动安装系统工具或修改 PATH。
+- 旧作业中的 Conda、旧盘符和“本机已验证”属于历史环境记录；复用时重新验证，按项目迁移，不把文字替换当成迁移完成。
+- 虚拟环境、模型权重、私人照片和生成结果默认不进入 Git；记录模型来源、版本与校验值，不提交凭据。
 
 
 ## 教材参考

@@ -36,7 +36,7 @@
 
 ## 编码环境
 
-- 新项目使用 `uv`，在各自的 `projects/<项目名>/` 下维护 `pyproject.toml`、`.python-version` 和 `uv.lock`，环境隔离到项目内 `.venv`。
+- 新项目使用 `uv`，在各自的 `projects/<专题>/<编号_项目名>/` 下维护 `pyproject.toml`、`.python-version` 和 `uv.lock`，环境隔离到项目内 `.venv`。
 - 在项目目录执行 `uv sync --locked` 安装锁定依赖，使用 `uv run python ...` 运行；不依赖系统 `python`、旧电脑的绝对路径或已激活的 Conda 环境。
 - 类型检查：`uv run python -m ty check`（即在项目环境内执行 `python -m ty check`）；测试命令遵循项目 README。
 - GPU 项目先检查显卡、驱动与 PyTorch CUDA 构建的兼容性，再做实际张量运算验证；不以 `nvidia-smi` 能显示显卡代替推理验证。

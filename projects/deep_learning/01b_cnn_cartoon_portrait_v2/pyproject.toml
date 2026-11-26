@@ -1,0 +1,10 @@
+[project]
+name = "cnn-cartoon-portrait-v2"
+version = "0.1.0"
+requires-python = ">=3.10"
+
+[tool.ty.environment]
+extra-paths = ["src", "../01a_cnn_cartoon_portrait/.deps"]
+
+[tool.ty.src]
+include = ["src", "tests", "run.py", "inspect_run.py"]

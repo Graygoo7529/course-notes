@@ -37,4 +37,4 @@ torch = { index = "pytorch-cu128" }
 torchvision = { index = "pytorch-cu128" }
 
 [tool.ty.src]
-include = ["src", "scripts", "tests"]
+include = ["src", "scripts", "tests", "run.py"]

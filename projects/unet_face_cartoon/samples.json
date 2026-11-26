@@ -1,0 +1,29 @@
+[
+  {
+    "id": "liu_yifei",
+    "sha256": "fa02845cd6c93073dc9b15b64774004975fe1576370d03796d1195c0c34b3414",
+    "commons_title": "File:Liu Yifei Portrait1.jpg",
+    "author": "刘亦菲吧官方",
+    "license": "CC BY-SA 2.5",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.5/",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Liu_Yifei_Portrait1.jpg"
+  },
+  {
+    "id": "eileen_collins",
+    "sha256": "8365fc4c001f7dab9398664cd37e45cdbdc744cd31de9cb1c3eced41b4432fc9",
+    "commons_title": "File:Commander Eileen Collins - GPN-2000-001177.jpg",
+    "author": "Robert Markowitz / NASA",
+    "license": "Public domain (US federal government work)",
+    "license_url": "https://www.nasa.gov/nasa-brand-center/images-and-media/",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Commander_Eileen_Collins_-_GPN-2000-001177.jpg"
+  },
+  {
+    "id": "barack_obama",
+    "sha256": "1ff5f7ed65cab8d1234053e260cce902b47be7dc2e946063e1d3f59537ba3bfb",
+    "commons_title": "File:U.S. President-elect Barack Obama Official Portrait.jpg",
+    "author": "Obama-Biden Transition project",
+    "license": "CC BY 3.0",
+    "license_url": "https://creativecommons.org/licenses/by/3.0/",
+    "source_page": "https://commons.wikimedia.org/wiki/File:U.S._President-elect_Barack_Obama_Official_Portrait.jpg"
+  }
+]

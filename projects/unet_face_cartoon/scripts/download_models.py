@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import shutil
 import sys
+from urllib.request import urlopen
 from zipfile import ZipFile
 
 import gdown
@@ -70,12 +71,17 @@ def main() -> int:
             if args.check:
                 raise FileNotFoundError(f"Missing model: {target}")
             target.parent.mkdir(parents=True, exist_ok=True)
-            downloaded = gdown.download(
-                url=entry["url"], output=str(partial), quiet=False,
-                use_cookies=False, resume=True,
-            )
-            if downloaded is None:
-                raise RuntimeError("Download did not produce a file")
+            if entry.get("transport") == "http":
+                print(f"Downloading {entry['url']}", flush=True)
+                with urlopen(entry["url"], timeout=60) as response, partial.open("wb") as stream:
+                    shutil.copyfileobj(response, stream)
+            else:
+                downloaded = gdown.download(
+                    url=entry["url"], output=str(partial), quiet=False,
+                    use_cookies=False, resume=True,
+                )
+                if downloaded is None:
+                    raise RuntimeError("Download did not produce a file")
             inspect_file(partial, entry["sha256"])
             partial.rename(target)
         record = inspect_file(target, entry["sha256"])
